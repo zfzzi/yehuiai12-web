@@ -5,6 +5,7 @@ dist/
 *.log
 *.local
 *.tsbuildinfo
+qa-screenshots/
 
 .DS_Store
 Thumbs.db

@@ -6,6 +6,7 @@ import {
   styleReferences
 } from "./data";
 import { exportProject, generateNightRender, optimizePrompt } from "./api/nightRenderClient";
+import { AuthScreen } from "./components/AuthScreen";
 import { CanvasStage } from "./components/CanvasStage";
 import { InspectorPanel } from "./components/InspectorPanel";
 import { LeftPanel } from "./components/LeftPanel";
@@ -24,6 +25,7 @@ import "./styles.css";
 const projectId = "yeyuai-active-project";
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [references, setReferences] = useState<ReferenceImage[]>(defaultReferences);
   const [selectedStyleReference, setSelectedStyleReference] = useState(styleReferences[0]);
   const [sceneType, setSceneType] = useState<SceneType>(styleReferences[0].sceneType);
@@ -261,6 +263,10 @@ function App() {
     (reference) => reference.role === "primary"
   )?.previewUrl;
   const canGenerate = Boolean(primaryPreviewUrl);
+
+  if (!isAuthenticated) {
+    return <AuthScreen onAuthenticated={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="app-shell">

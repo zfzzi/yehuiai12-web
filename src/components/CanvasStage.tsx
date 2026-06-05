@@ -1,33 +1,33 @@
 import { type PointerEvent, useEffect, useRef, useState } from "react";
 import {
-  BadgeCheck,
   Blend,
   Crosshair,
-  Focus,
   Eraser,
   ImagePlus,
   Lightbulb,
   LockKeyhole,
   Maximize2,
   PenLine,
-  SlidersHorizontal,
   SunMoon,
   Trash2,
   ZoomIn,
   ZoomOut
 } from "lucide-react";
-import type { CanvasLock, CanvasTool } from "../types/nightRender";
-import { canvasLocks } from "../data";
+import type {
+  CanvasAnnotationSnapshot,
+  CanvasGenerationContext,
+  CanvasTool,
+  NightRenderTimeRange
+} from "../types/nightRender";
 
 interface CanvasStageProps {
   activeFixture: string;
   activeTool: CanvasTool;
   compare: number;
-  locks: CanvasLock[];
   resultImageUrl?: string;
   sourceImageUrl?: string;
+  onCanvasStateChange: (context: CanvasGenerationContext) => void;
   onCompareChange: (value: number) => void;
-  onLockToggle: (lock: CanvasLock) => void;
   onPrimaryImageUpload: (file: File) => void;
   onToolChange: (tool: CanvasTool) => void;
 }
@@ -39,7 +39,7 @@ const toolIcons: Array<{ tool: CanvasTool; icon: typeof PenLine }> = [
   { tool: "禁止修改", icon: LockKeyhole }
 ];
 
-const timeOptions = [
+const timeOptions: NightRenderTimeRange[] = [
   "日落余晖 17:00-18:00",
   "蓝调时刻 18:00-19:00",
   "入夜商业 19:00-21:00",
@@ -56,57 +56,6 @@ type AreaTool = Extract<CanvasTool, "局部重绘" | "遮罩选择" | "禁止修
 type AreaKind = "repaint" | "mask" | "avoid";
 type FixtureLineKind = "wash" | "linear";
 type FixtureMarkMode = "line" | "direction" | "point" | "area";
-
-type CanvasAnnotationItem =
-  | {
-      id: string;
-      type: "area";
-      kind: AreaKind;
-      label: string;
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    }
-  | {
-      id: string;
-      type: "fixtureLine";
-      kind: FixtureLineKind;
-      fixture: string;
-      label: string;
-      x1: number;
-      y1: number;
-      x2: number;
-      y2: number;
-    }
-  | {
-      id: string;
-      type: "fixtureDirection";
-      fixture: string;
-      label: string;
-      x: number;
-      y: number;
-      targetX: number;
-      targetY: number;
-    }
-  | {
-      id: string;
-      type: "fixturePoint";
-      fixture: string;
-      label: string;
-      x: number;
-      y: number;
-    }
-  | {
-      id: string;
-      type: "fixtureArea";
-      fixture: string;
-      label: string;
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    };
 
 interface DraftArea {
   kind: AreaKind;
@@ -241,10 +190,10 @@ function normalizeFixtureArea(draft: DraftFixture) {
 }
 
 function moveAnnotation(
-  annotation: CanvasAnnotationItem,
+  annotation: CanvasAnnotationSnapshot,
   deltaX: number,
   deltaY: number
-): CanvasAnnotationItem {
+): CanvasAnnotationSnapshot {
   if (annotation.type === "area") {
     return {
       ...annotation,
@@ -292,11 +241,10 @@ export function CanvasStage({
   activeFixture,
   activeTool,
   compare,
-  locks,
   resultImageUrl,
   sourceImageUrl,
+  onCanvasStateChange,
   onCompareChange,
-  onLockToggle,
   onPrimaryImageUpload,
   onToolChange
 }: CanvasStageProps) {
@@ -305,9 +253,10 @@ export function CanvasStage({
   const emptyUploadInputRef = useRef<HTMLInputElement | null>(null);
   const imageFrameRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const [annotationItems, setAnnotationItems] = useState<CanvasAnnotationItem[]>([]);
+  const [annotationItems, setAnnotationItems] = useState<CanvasAnnotationSnapshot[]>([]);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string>();
-  const [selectedTime, setSelectedTime] = useState(timeOptions[1]);
+  const [selectedTime, setSelectedTime] =
+    useState<NightRenderTimeRange>(timeOptions[1]);
   const [dragState, setDragState] = useState<{
     id: string;
     lastX: number;
@@ -324,6 +273,14 @@ export function CanvasStage({
   });
   const [draftArea, setDraftArea] = useState<DraftArea | null>(null);
   const [draftFixture, setDraftFixture] = useState<DraftFixture | null>(null);
+
+  useEffect(() => {
+    onCanvasStateChange({
+      timeRange: selectedTime,
+      annotations: annotationItems,
+      viewBox
+    });
+  }, [annotationItems, onCanvasStateChange, selectedTime]);
 
   useEffect(() => {
     setAnnotationItems([]);
@@ -687,7 +644,7 @@ export function CanvasStage({
     setDragState(null);
   }
 
-  function renderAreaAnnotation(annotation: Extract<CanvasAnnotationItem, { type: "area" }>) {
+  function renderAreaAnnotation(annotation: Extract<CanvasAnnotationSnapshot, { type: "area" }>) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
     const labelX = clamp(annotation.x + 10, 10, viewBox.width - labelLength - 10);
@@ -759,7 +716,7 @@ export function CanvasStage({
   }
 
   function renderFixtureLineAnnotation(
-    annotation: Extract<CanvasAnnotationItem, { type: "fixtureLine" }>
+    annotation: Extract<CanvasAnnotationSnapshot, { type: "fixtureLine" }>
   ) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
@@ -817,7 +774,7 @@ export function CanvasStage({
   }
 
   function renderFixtureDirectionAnnotation(
-    annotation: Extract<CanvasAnnotationItem, { type: "fixtureDirection" }>
+    annotation: Extract<CanvasAnnotationSnapshot, { type: "fixtureDirection" }>
   ) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
@@ -870,7 +827,7 @@ export function CanvasStage({
   }
 
   function renderFixturePointAnnotation(
-    annotation: Extract<CanvasAnnotationItem, { type: "fixturePoint" }>
+    annotation: Extract<CanvasAnnotationSnapshot, { type: "fixturePoint" }>
   ) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
@@ -907,7 +864,7 @@ export function CanvasStage({
   }
 
   function renderFixtureAreaAnnotation(
-    annotation: Extract<CanvasAnnotationItem, { type: "fixtureArea" }>
+    annotation: Extract<CanvasAnnotationSnapshot, { type: "fixtureArea" }>
   ) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
@@ -980,7 +937,7 @@ export function CanvasStage({
     );
   }
 
-  function renderAnnotation(annotation: CanvasAnnotationItem) {
+  function renderAnnotation(annotation: CanvasAnnotationSnapshot) {
     if (annotation.type === "area") {
       return renderAreaAnnotation(annotation);
     }
@@ -1081,8 +1038,8 @@ export function CanvasStage({
     <main className="canvas-shell">
       <div className="canvas-head">
         <div>
-          <h1>AI 照明效果图工作台</h1>
-          <p>保留原结构与透视，只把灯光、天空、内透和氛围交给 AI。</p>
+          <h1>编辑器</h1>
+          <p>上传主图后标注灯位、锁定结构，并生成夜景测试预览。</p>
         </div>
       </div>
 
@@ -1168,7 +1125,9 @@ export function CanvasStage({
               <select
                 aria-label="选择夜景时间段"
                 value={selectedTime}
-                onChange={(event) => setSelectedTime(event.currentTarget.value)}
+                onChange={(event) =>
+                  setSelectedTime(event.currentTarget.value as NightRenderTimeRange)
+                }
               >
                 {timeOptions.map((time) => (
                   <option key={time}>{time}</option>
@@ -1184,15 +1143,23 @@ export function CanvasStage({
         >
           {hasSource ? (
             <>
-              <div className="canvas-viewport-content" style={canvasViewportStyle}>
+              <div
+                className={
+                  hasResult
+                    ? "canvas-viewport-content has-result-preview"
+                    : "canvas-viewport-content"
+                }
+                style={canvasViewportStyle}
+              >
                 <img className="render-image source-image" src={sourceImageUrl} alt="用户上传的主图" />
                 {hasResult ? (
                   <>
                     <img
                       className="render-image generated"
                       src={resultImageUrl}
-                      alt="生成后的夜景效果图"
+                      alt="生成后的夜景测试预览"
                     />
+                    <div className="night-preview-overlay" aria-hidden="true" />
                     <img
                       className="render-image before-layer"
                       src={sourceImageUrl}
@@ -1258,7 +1225,7 @@ export function CanvasStage({
                   <ImagePlus size={26} />
                 </div>
                 <h2>上传主图开始生成夜景</h2>
-                <p>支持建筑、景观、室内和装置照片。上传后可标注灯位、锁定结构并设置照明参数。</p>
+                <p>支持建筑、景观、室内和装置照片。上传后可标注灯位并设置生成参数。</p>
                 <div className="empty-canvas-steps">
                   <span>1 上传主图</span>
                   <span>2 选择参考风格</span>
@@ -1304,36 +1271,6 @@ export function CanvasStage({
           />
           <span>{hasResult ? "生成图" : "待生成"}</span>
         </div>
-      </div>
-
-      <div className="canvas-locks" aria-label="结构锁定">
-        <div className="lock-title">
-          <BadgeCheck size={15} aria-hidden="true" />
-          保护约束
-        </div>
-        {canvasLocks.map((lock) => (
-          <button
-            className={locks.includes(lock) ? "lock-chip is-active" : "lock-chip"}
-            key={lock}
-            type="button"
-            onClick={() => onLockToggle(lock)}
-          >
-            <LockKeyhole size={13} aria-hidden="true" />
-            锁定{lock}
-          </button>
-        ))}
-        <button className="lock-chip accent" type="button">
-          <SlidersHorizontal size={13} aria-hidden="true" />
-          只修改灯光
-        </button>
-        <button className="lock-chip accent" type="button">
-          <Focus size={13} aria-hidden="true" />
-          只增强氛围
-        </button>
-        <button className="lock-chip accent" type="button">
-          <Lightbulb size={13} aria-hidden="true" />
-          只修改灯具
-        </button>
       </div>
     </main>
   );

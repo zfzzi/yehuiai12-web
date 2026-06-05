@@ -83,6 +83,73 @@ export type CanvasTool =
   | "标注灯位"
   | "禁止修改";
 
+export type NightRenderTimeRange =
+  | "日落余晖 17:00-18:00"
+  | "蓝调时刻 18:00-19:00"
+  | "入夜商业 19:00-21:00"
+  | "深夜静谧 22:00-24:00"
+  | "节庆夜游 全天候";
+
+export type CanvasAnnotationSnapshot =
+  | {
+      id: string;
+      type: "area";
+      kind: "repaint" | "mask" | "avoid";
+      label: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }
+  | {
+      id: string;
+      type: "fixtureLine";
+      kind: "wash" | "linear";
+      fixture: string;
+      label: string;
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+    }
+  | {
+      id: string;
+      type: "fixtureDirection";
+      fixture: string;
+      label: string;
+      x: number;
+      y: number;
+      targetX: number;
+      targetY: number;
+    }
+  | {
+      id: string;
+      type: "fixturePoint";
+      fixture: string;
+      label: string;
+      x: number;
+      y: number;
+    }
+  | {
+      id: string;
+      type: "fixtureArea";
+      fixture: string;
+      label: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+
+export interface CanvasGenerationContext {
+  timeRange: NightRenderTimeRange;
+  annotations: CanvasAnnotationSnapshot[];
+  viewBox: {
+    width: number;
+    height: number;
+  };
+}
+
 export interface CanvasAnnotation {
   id: string;
   label: string;

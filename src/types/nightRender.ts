@@ -27,6 +27,35 @@ export interface StyleReference {
   tone: "outdoor" | "indoor" | "facade" | "commercial";
 }
 
+export type SceneMode = "outdoor" | "indoor";
+
+export type OutdoorSeason = "春" | "夏" | "秋" | "冬";
+
+export type OutdoorTimeRange =
+  | "17:00-19:00"
+  | "19:00-20:00"
+  | "20:00-22:00"
+  | "22:00-24:00"
+  | "00:00-";
+
+export type OutdoorWeather =
+  | "晴朗"
+  | "多云"
+  | "雾气"
+  | "雨天"
+  | "雪天"
+  | "星空"
+  | "极光";
+
+export interface SceneModeSelection {
+  mode: SceneMode;
+  outdoor: {
+    season: OutdoorSeason;
+    timeRange: OutdoorTimeRange;
+    weather: OutdoorWeather;
+  };
+}
+
 export type SceneType =
   | "建筑立面夜景"
   | "商业街区夜景"
@@ -143,6 +172,7 @@ export type CanvasAnnotationSnapshot =
 
 export interface CanvasGenerationContext {
   timeRange: NightRenderTimeRange;
+  activeTool: CanvasTool;
   annotations: CanvasAnnotationSnapshot[];
   viewBox: {
     width: number;
@@ -177,7 +207,7 @@ export interface GenerationRequest {
     template: LightingMoodTemplate;
   };
   output: {
-    size: "2K" | "4K" | "6K" | "8K" | "16K";
+    size: "1K" | "2K";
     ratio: "16:9" | "3:4" | "1:1" | "自动适配";
     format: "PNG" | "JPG" | "TIFF";
   };
@@ -190,6 +220,15 @@ export interface GenerationResponse {
   resultImageUrl?: string;
   versionId?: string;
   error?: string;
+}
+
+export interface GenerationHistoryItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  outputSize: "1K" | "2K";
+  createdAt: string;
 }
 
 export interface PromptOptimizationResponse {
@@ -206,5 +245,5 @@ export interface ProjectVersion {
 export interface ExportRequest {
   projectId: string;
   versionId: string;
-  type: "2K" | "4K" | "6K" | "8K" | "汇报版式" | "对比图";
+  type: "1K" | "2K";
 }

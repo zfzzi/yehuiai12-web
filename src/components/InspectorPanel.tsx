@@ -6,8 +6,7 @@ import {
   Lightbulb,
   Loader2,
   Send,
-  SquareStack,
-  Wand2
+  SquareStack
 } from "lucide-react";
 import { fixtureGroups, negativePromptOptions, sceneTypes } from "../data";
 import type {
@@ -16,13 +15,9 @@ import type {
   SceneType
 } from "../types/nightRender";
 
-const exportOptions: ExportRequest["type"][] = [
-  "2K",
-  "4K",
-  "6K",
-  "8K",
-  "汇报版式",
-  "对比图"
+const outputSizes: ExportRequest["type"][] = [
+  "1K",
+  "2K"
 ];
 
 interface ApiStatus {
@@ -33,34 +28,34 @@ interface ApiStatus {
 interface InspectorPanelProps {
   apiStatus: ApiStatus;
   activeFixture: string;
+  canExport: boolean;
   canGenerate: boolean;
   negativePrompts: string[];
-  prompt: string;
+  outputSize: ExportRequest["type"];
   sceneType: SceneType;
   selectedTemplate: LightingMoodTemplate;
-  onExport: (type: ExportRequest["type"]) => void;
+  onExport: () => void;
   onFixtureChange: (fixture: string) => void;
   onGenerate: () => void;
   onNegativeToggle: (prompt: string) => void;
-  onOptimizePrompt: () => void;
-  onPromptChange: (prompt: string) => void;
+  onOutputSizeChange: (size: ExportRequest["type"]) => void;
   onSceneChange: (scene: SceneType) => void;
 }
 
 export function InspectorPanel({
   apiStatus,
   activeFixture,
+  canExport,
   canGenerate,
   negativePrompts,
-  prompt,
+  outputSize,
   sceneType,
   selectedTemplate,
   onExport,
   onFixtureChange,
   onGenerate,
   onNegativeToggle,
-  onOptimizePrompt,
-  onPromptChange,
+  onOutputSizeChange,
   onSceneChange
 }: InspectorPanelProps) {
   const isLoading = apiStatus.state === "loading";
@@ -70,7 +65,7 @@ export function InspectorPanel({
       <div className="panel-head">
         <div>
           <h2>生成设置</h2>
-          <p>场景、灯具、提示词与约束</p>
+          <p>场景、灯具、输出与约束</p>
         </div>
         <Lightbulb size={18} aria-hidden="true" />
       </div>
@@ -91,9 +86,9 @@ export function InspectorPanel({
         </label>
 
         <div className="selected-style-summary">
-          <span>当前场景参考</span>
+          <span>当前生成预设</span>
           <strong>{selectedTemplate}</strong>
-          <small>在左侧场景参考中切换生成方向。</small>
+          <small>左侧场景模式会自动写入隐藏提示词。</small>
         </div>
       </section>
 
@@ -118,54 +113,48 @@ export function InspectorPanel({
         ))}
       </section>
 
-      <section className="control-section prompt-section">
-        <div className="section-title">自然语言指令</div>
-        <textarea
-          className="prompt-box"
-          value={prompt}
-          rows={5}
-          onChange={(event) => onPromptChange(event.currentTarget.value)}
-        />
-        <div className="prompt-actions">
-          <button className="ghost-button wide" onClick={onOptimizePrompt} type="button">
-            <Wand2 size={15} aria-hidden="true" />
-            优化提示词
-          </button>
-          <button
-            className="primary-button"
-            disabled={!canGenerate || isLoading}
-            onClick={onGenerate}
-            type="button"
-            title={canGenerate ? "生成夜景方案" : "请先上传主图"}
-          >
-            {isLoading ? <Loader2 className="spin" size={15} /> : <Send size={15} />}
-            生成夜景
-          </button>
-        </div>
-      </section>
-
       <section className="control-section output-section">
         <div className="section-title with-icon">
           <Download size={14} aria-hidden="true" />
-          输出
+          分辨率
         </div>
-        <div className="inspector-export-grid">
-          {exportOptions.map((type) => (
+        <div className="output-size-grid" role="group" aria-label="选择输出尺寸">
+          {outputSizes.map((type) => (
             <button
-              className="export-button"
+              className={type === outputSize ? "export-button is-active" : "export-button"}
               key={type}
               type="button"
-              onClick={() => onExport(type)}
+              onClick={() => onOutputSizeChange(type)}
             >
-              {type === "汇报版式" ? (
-                <FileStack size={14} aria-hidden="true" />
-              ) : (
-                <SquareStack size={14} aria-hidden="true" />
-              )}
+              <SquareStack size={14} aria-hidden="true" />
               {type}
             </button>
           ))}
         </div>
+        <button
+          className="primary-button export-primary"
+          disabled={!canExport || isLoading}
+          type="button"
+          onClick={onExport}
+          title={canExport ? "导出当前预览图" : "生成预览后可导出"}
+        >
+          <FileStack size={15} aria-hidden="true" />
+          导出当前图
+        </button>
+      </section>
+
+      <section className="control-section generate-section">
+        <div className="section-title">一键出图</div>
+        <button
+          className="primary-button generate-primary"
+          disabled={!canGenerate || isLoading}
+          onClick={onGenerate}
+          type="button"
+          title={canGenerate ? "生成夜景方案" : "请先上传主图"}
+        >
+          {isLoading ? <Loader2 className="spin" size={15} /> : <Send size={15} />}
+          {isLoading ? "生成中" : "生成夜景"}
+        </button>
       </section>
 
       <section className="control-section negative-section">

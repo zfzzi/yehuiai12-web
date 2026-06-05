@@ -1,6 +1,7 @@
 import type {
   CanvasAnnotationSnapshot,
   CanvasGenerationContext,
+  CanvasTool,
   ExportRequest,
   LightingMoodTemplate,
   NightRenderTimeRange,
@@ -78,6 +79,10 @@ export interface NightRenderApiPayload {
     title: string;
     template: LightingMoodTemplate;
   };
+  tools: {
+    active: CanvasTool;
+    enabled: CanvasTool[];
+  };
 }
 
 const preserveConstraints = [
@@ -92,12 +97,21 @@ const preserveConstraints = [
 ];
 
 const outputSizeMap: Record<ExportRequest["type"], string> = {
+  "1K": "1024x1024",
   "2K": "2048x1152",
-  "4K": "3840x2160",
-  "6K": "6144x3456",
-  "8K": "7680x4320",
-  汇报版式: "3840x2160",
-  对比图: "3840x2160"
+};
+
+const canvasToolPrompts: Record<CanvasTool, string> = {
+  局部重绘: "局部重绘区域只允许调整灯光、亮度、氛围和内透，不改变原始结构。",
+  遮罩选择: "遮罩选择区域是重点生成区域，需要优先响应用户的灯光和氛围要求。",
+  标注灯位: "标注灯位表示灯具安装位置、范围和照射方向，生成时必须按对应灯具类型呈现光效。",
+  禁止修改: "禁止修改区域必须保持原图内容不变，不替换材质、不移动元素、不改变形体。"
+};
+
+const areaKindPrompts: Record<"repaint" | "mask" | "avoid", string> = {
+  repaint: "局部重绘",
+  mask: "遮罩选择",
+  avoid: "禁止修改"
 };
 
 const fixtureColorMap: Record<string, string> = {
@@ -319,13 +333,16 @@ export function buildApiAnnotations(canvas: CanvasGenerationContext) {
   });
 }
 
-function buildAnnotationInstruction(annotations: ApiFixtureAnnotation[]) {
-  if (annotations.length === 0) {
+function buildFixtureAnnotationInstruction(annotations: ApiFixtureAnnotation[]) {
+  const fixtureAnnotations = annotations.filter(
+    (annotation) => annotation.category === "fixture"
+  );
+
+  if (fixtureAnnotations.length === 0) {
     return "未添加灯具标注时，请根据建筑立面和场景参考生成克制、专业的夜景照明。";
   }
 
-  return annotations
-    .filter((annotation) => annotation.category === "fixture")
+  return fixtureAnnotations
     .map((annotation) => {
       const position =
         annotation.type === "area"
@@ -336,14 +353,55 @@ function buildAnnotationInstruction(annotations: ApiFixtureAnnotation[]) {
     .join("；");
 }
 
+function buildEditAnnotationInstruction(annotations: ApiFixtureAnnotation[]) {
+  const editAnnotations = annotations.filter(
+    (annotation) => annotation.category === "edit"
+  );
+
+  if (editAnnotations.length === 0) {
+    return "未添加局部重绘、遮罩或禁止修改框选时，按全图整体处理。";
+  }
+
+  return editAnnotations
+    .map((annotation) => {
+      const kind =
+        annotation.label.includes("局部重绘")
+          ? "repaint"
+          : annotation.label.includes("遮罩")
+            ? "mask"
+            : "avoid";
+      return `${areaKindPrompts[kind]} 使用 ${annotation.color} 标注，位置 ${JSON.stringify(
+        annotation.normalizedCoordinates
+      )}。${canvasToolPrompts[
+        kind === "repaint"
+          ? "局部重绘"
+          : kind === "mask"
+            ? "遮罩选择"
+            : "禁止修改"
+      ]}`;
+    })
+    .join("；");
+}
+
+function buildToolInstruction(activeTool: CanvasTool) {
+  return [
+    `当前选中的功能按钮：${activeTool}。${canvasToolPrompts[activeTool]}`,
+    `默认工具规则：${Object.entries(canvasToolPrompts)
+      .map(([tool, instruction]) => `${tool}=${instruction}`)
+      .join("；")}`
+  ].join("\n");
+}
+
 export function buildFinalPrompt(payload: Omit<NightRenderApiPayload, "finalPrompt">) {
   return [
     "将用户上传的白天建筑照片转换为专业夜景照明效果图。",
     `时间段：${payload.timeRange}。`,
     `场景类型：${payload.sceneType}。`,
     `风格模板：${payload.template}。`,
-    `用户补充指令：${payload.prompt || "无"}。`,
-    `灯具标注要求：${buildAnnotationInstruction(payload.annotations)}。`,
+    `场景模式隐藏预设：${payload.prompt || "无"}。`,
+    `功能按钮规则：${buildToolInstruction(payload.tools.active)}。`,
+    `灯具标注要求：${buildFixtureAnnotationInstruction(payload.annotations)}。`,
+    `局部编辑标注要求：${buildEditAnnotationInstruction(payload.annotations)}。`,
     `输出分辨率：${payload.output.resolution}，目标尺寸 ${payload.output.size}。`,
     `硬性保持约束：${payload.preserveConstraints.join("、")}。`,
     `负面约束：${payload.negativePrompts.join("、")}。`,
@@ -369,7 +427,7 @@ export function buildNightRenderApiPayload(input: NightRenderPayloadInput) {
     annotations,
     output: {
       resolution: input.outputSize,
-      size: outputSizeMap[input.outputSize] ?? outputSizeMap["4K"],
+      size: outputSizeMap[input.outputSize] ?? outputSizeMap["2K"],
       ratio: "自动适配",
       format: "PNG"
     },
@@ -377,6 +435,10 @@ export function buildNightRenderApiPayload(input: NightRenderPayloadInput) {
       id: input.styleReference.id,
       title: input.styleReference.title,
       template: input.styleReference.template
+    },
+    tools: {
+      active: input.canvas.activeTool,
+      enabled: ["局部重绘", "遮罩选择", "标注灯位", "禁止修改"]
     }
   };
 

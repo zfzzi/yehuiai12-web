@@ -474,7 +474,7 @@ async function generateOpenAiCompatibleNightRender(
 }
 
 function getRunningHubResolution(resolution: NightRenderApiPayload["output"]["resolution"]) {
-  return resolution === "2K" ? "2k" : "2k";
+  return resolution === "1K" ? "1k" : "2k";
 }
 
 function buildRunningHubSubmitBody(
@@ -493,9 +493,19 @@ function buildRunningHubSubmitBody(
   }
 
   if (endpoint.endsWith("/edit") || endpoint.includes("/edit")) {
+    if (endpoint.includes("rhart-imagine-image-quality/edit")) {
+      return {
+        prompt: input.payload.finalPrompt,
+        imageUrl: sourceImageUrl ?? "",
+        numImages: 1,
+        resolution: getRunningHubResolution(input.payload.output.resolution)
+      };
+    }
+
     return {
       prompt: input.payload.finalPrompt,
-      image: sourceImageUrl ?? ""
+      image: sourceImageUrl ?? "",
+      resolution: getRunningHubResolution(input.payload.output.resolution)
     };
   }
 

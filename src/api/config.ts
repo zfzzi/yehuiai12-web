@@ -16,6 +16,9 @@ export interface NightRenderApiConfig {
 }
 
 const DEFAULT_TIMEOUT_MS = 180_000;
+const DEFAULT_RUNNINGHUB_BASE_URL = "https://www.runninghub.ai";
+const DEFAULT_RUNNINGHUB_IMAGE_ENDPOINT =
+  "/openapi/v2/rhart-imagine-image-quality/edit";
 const DEFAULT_IMAGE_MODEL = "gpt-image-1";
 const DEFAULT_PROMPT_MODEL = "gpt-4o-mini";
 const LOCAL_BASE_URL_KEY = "yehuiai.api.baseUrl";
@@ -32,7 +35,13 @@ function cleanBaseUrl(value: string) {
 
 function cleanEndpoint(value: string) {
   const trimmed = value.trim();
-  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  const endpoint = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+
+  if (endpoint.startsWith("/rhart-")) {
+    return `/openapi/v2${endpoint}`;
+  }
+
+  return endpoint;
 }
 
 function readLocalOverride(key: string) {
@@ -41,10 +50,23 @@ function readLocalOverride(key: string) {
   }
 
   try {
-    return window.localStorage.getItem(key) ?? "";
+    return (window.localStorage.getItem(key) ?? "").trim();
   } catch {
     return "";
   }
+}
+
+function readImageEndpointOverride() {
+  const localEndpoint = readLocalOverride(LOCAL_IMAGE_ENDPOINT_KEY);
+
+  if (
+    localEndpoint.includes("rhart-image-x-official/edit") ||
+    localEndpoint.includes("rhart-image-g-2-official/image-to-image")
+  ) {
+    return "";
+  }
+
+  return localEndpoint;
 }
 
 function readTimeoutMs(value: string | undefined) {
@@ -76,12 +98,12 @@ export function getNightRenderApiConfig(): NightRenderApiConfig {
   const baseUrl = cleanBaseUrl(
     readLocalOverride(LOCAL_BASE_URL_KEY) ||
       import.meta.env.VITE_NIGHT_RENDER_API_BASE_URL ||
-      ""
+      DEFAULT_RUNNINGHUB_BASE_URL
   );
   const imageGenerationEndpoint = cleanEndpoint(
-    readLocalOverride(LOCAL_IMAGE_ENDPOINT_KEY) ||
+    readImageEndpointOverride() ||
       import.meta.env.VITE_NIGHT_RENDER_IMAGE_ENDPOINT ||
-      "/v1/images/generations"
+      DEFAULT_RUNNINGHUB_IMAGE_ENDPOINT
   );
 
   return {
@@ -94,7 +116,8 @@ export function getNightRenderApiConfig(): NightRenderApiConfig {
     uploadMode: readUploadMode(import.meta.env.VITE_NIGHT_RENDER_API_UPLOAD_MODE),
     provider: readProvider(
       readLocalOverride(LOCAL_PROVIDER_KEY) ||
-        import.meta.env.VITE_NIGHT_RENDER_API_PROVIDER,
+        import.meta.env.VITE_NIGHT_RENDER_API_PROVIDER ||
+        "runninghub",
       baseUrl,
       imageGenerationEndpoint
     ),

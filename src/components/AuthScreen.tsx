@@ -23,6 +23,11 @@ import {
 } from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
+import {
+  createRegisteredUser,
+  resolveLoginUser,
+  type UserProfile
+} from "../auth/userProfile";
 import { cn } from "../lib/utils";
 
 type AuthMode = "login" | "register";
@@ -37,7 +42,7 @@ type FieldName =
   | "agreement";
 
 interface AuthScreenProps {
-  onAuthenticated: () => void;
+  onAuthenticated: (profile: UserProfile) => void;
 }
 
 interface FieldState {
@@ -356,9 +361,30 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
 
     setIsSubmitting(true);
     window.setTimeout(() => {
+      const profile =
+        mode === "register"
+          ? createRegisteredUser({
+              username: fields.username.value,
+              email: fields.email.value,
+              phone: fields.phone.value
+            })
+          : resolveLoginUser(fields.identifier.value);
+
       setIsSubmitting(false);
-      onAuthenticated();
+      onAuthenticated(profile);
     }, 380);
+  }
+
+  function handleThirdPartyLogin(provider: "微信" | "GitHub") {
+    setIsSubmitting(true);
+    window.setTimeout(() => {
+      const profile = resolveLoginUser(
+        provider === "微信" ? "wechat@yehuiai.local" : "github@yehuiai.local"
+      );
+
+      setIsSubmitting(false);
+      onAuthenticated(profile);
+    }, 300);
   }
 
   return (
@@ -489,11 +515,23 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Button className="h-11" variant="secondary" type="button">
+            <Button
+              className="h-11"
+              disabled={isSubmitting}
+              variant="secondary"
+              type="button"
+              onClick={() => handleThirdPartyLogin("微信")}
+            >
               <MessageCircle className="size-4" aria-hidden="true" />
               微信
             </Button>
-            <Button className="h-11" variant="secondary" type="button">
+            <Button
+              className="h-11"
+              disabled={isSubmitting}
+              variant="secondary"
+              type="button"
+              onClick={() => handleThirdPartyLogin("GitHub")}
+            >
               <Github className="size-4" aria-hidden="true" />
               GitHub
             </Button>

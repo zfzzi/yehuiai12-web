@@ -1,4 +1,10 @@
-import { type PointerEvent, useEffect, useRef, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent,
+  useEffect,
+  useRef,
+  useState
+} from "react";
 import {
   Blend,
   Crosshair,
@@ -273,14 +279,16 @@ export function CanvasStage({
   });
   const [draftArea, setDraftArea] = useState<DraftArea | null>(null);
   const [draftFixture, setDraftFixture] = useState<DraftFixture | null>(null);
+  const [isCompareDragging, setIsCompareDragging] = useState(false);
 
   useEffect(() => {
     onCanvasStateChange({
       timeRange: selectedTime,
+      activeTool,
       annotations: annotationItems,
       viewBox
     });
-  }, [annotationItems, onCanvasStateChange, selectedTime]);
+  }, [activeTool, annotationItems, onCanvasStateChange, selectedTime]);
 
   useEffect(() => {
     setAnnotationItems([]);
@@ -346,6 +354,70 @@ export function CanvasStage({
       x: ((event.clientX - bounds.left) / bounds.width) * viewBox.width,
       y: ((event.clientY - bounds.top) / bounds.height) * viewBox.height
     };
+  }
+
+  function updateCompareFromClientX(clientX: number) {
+    const bounds = imageFrameRef.current
+      ?.querySelector(".canvas-viewport-content")
+      ?.getBoundingClientRect();
+
+    if (!bounds || bounds.width === 0) {
+      return;
+    }
+
+    const nextCompare = ((clientX - bounds.left) / bounds.width) * 100;
+    onCompareChange(Math.round(clamp(nextCompare, 18, 82)));
+  }
+
+  function handleComparePointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (!hasResult) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    setIsCompareDragging(true);
+    updateCompareFromClientX(event.clientX);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleComparePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!isCompareDragging) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    updateCompareFromClientX(event.clientX);
+  }
+
+  function handleComparePointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (isCompareDragging) {
+      event.preventDefault();
+      event.stopPropagation();
+      updateCompareFromClientX(event.clientX);
+      setIsCompareDragging(false);
+    }
+  }
+
+  function handleCompareKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (!hasResult) {
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      onCompareChange(clamp(compare - 2, 18, 82));
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      onCompareChange(clamp(compare + 2, 18, 82));
+    }
   }
 
   function resetCanvasView() {
@@ -1167,7 +1239,24 @@ export function CanvasStage({
                       style={{ clipPath: `inset(0 ${100 - compare}% 0 0)` }}
                       aria-hidden="true"
                     />
-                    <div className="compare-line" style={{ left: `${compare}%` }} />
+                    <div
+                      aria-label="图片对比拖拽线"
+                      aria-valuemax={82}
+                      aria-valuemin={18}
+                      aria-valuenow={compare}
+                      className={
+                        isCompareDragging
+                          ? "compare-line is-dragging"
+                          : "compare-line"
+                      }
+                      role="slider"
+                      style={{ left: `${compare}%` }}
+                      tabIndex={0}
+                      onKeyDown={handleCompareKeyDown}
+                      onPointerDown={handleComparePointerDown}
+                      onPointerMove={handleComparePointerMove}
+                      onPointerUp={handleComparePointerUp}
+                    />
                   </>
                 ) : null}
 
@@ -1228,7 +1317,7 @@ export function CanvasStage({
                 <p>支持建筑、景观、室内和装置照片。上传后可标注灯位并设置生成参数。</p>
                 <div className="empty-canvas-steps">
                   <span>1 上传主图</span>
-                  <span>2 选择参考风格</span>
+                  <span>2 选择场景模式</span>
                   <span>3 标注灯光区域</span>
                 </div>
               </button>

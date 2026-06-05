@@ -1,18 +1,24 @@
 import {
+  Building2,
+  CloudSun,
   FileImage,
   ImagePlus,
   Layers2,
   Map,
   Palette,
-  Plus,
   Trash2
 } from "lucide-react";
 import { useState } from "react";
-import { styleReferences } from "../data";
+import { outdoorSceneOptions } from "../data";
 import type {
+  GenerationHistoryItem,
+  OutdoorSeason,
+  OutdoorTimeRange,
+  OutdoorWeather,
   ReferenceImage,
   ReferenceImageRole,
-  StyleReference
+  SceneMode,
+  SceneModeSelection
 } from "../types/nightRender";
 
 const roleIcons: Record<ReferenceImageRole, typeof FileImage> = {
@@ -25,31 +31,40 @@ const roleIcons: Record<ReferenceImageRole, typeof FileImage> = {
 
 interface LeftPanelProps {
   references: ReferenceImage[];
-  selectedStyleId: string;
   onRemoveUpload: (id: string) => void;
-  onStyleSelect: (style: StyleReference) => void;
+  onOutdoorOptionChange: (
+    key: keyof SceneModeSelection["outdoor"],
+    value: OutdoorSeason | OutdoorTimeRange | OutdoorWeather
+  ) => void;
+  onSceneModeChange: (mode: SceneMode) => void;
   onUpload: (id: string, file: File) => void;
+  generationHistory: GenerationHistoryItem[];
+  activeHistoryId?: string;
+  onHistorySelect: (item: GenerationHistoryItem) => void;
+  sceneModeSelection: SceneModeSelection;
 }
 
 export function LeftPanel({
   references,
-  selectedStyleId,
   onRemoveUpload,
-  onStyleSelect,
-  onUpload
+  onOutdoorOptionChange,
+  onSceneModeChange,
+  onUpload,
+  generationHistory,
+  activeHistoryId,
+  onHistorySelect,
+  sceneModeSelection
 }: LeftPanelProps) {
   const [dropTargetId, setDropTargetId] = useState<string>();
+  const isOutdoor = sceneModeSelection.mode === "outdoor";
 
   return (
     <aside className="panel left-panel" aria-label="项目与素材">
       <div className="panel-head">
         <div>
-          <h2>输入素材</h2>
-          <p>上传主图、图纸，再选择场景参考。</p>
+          <h2>项目素材</h2>
+          <p>上传主图，再选择场景模式。</p>
         </div>
-        <button className="icon-button compact" aria-label="新建项目" type="button">
-          <Plus size={16} />
-        </button>
       </div>
 
       <div className="upload-list">
@@ -130,48 +145,116 @@ export function LeftPanel({
         })}
       </div>
 
-      <section className="style-reference-panel" aria-label="场景参考">
-        <div className="section-title">场景参考</div>
-        <div className="style-reference-grid">
-          {styleReferences.map((style) => (
-            <button
-              className={
-                style.id === selectedStyleId
-                  ? `style-reference-card scene-${style.tone} is-active`
-                  : `style-reference-card scene-${style.tone}`
-              }
-              key={style.id}
-              type="button"
-              onClick={() => onStyleSelect(style)}
-            >
-              <span className="style-thumb scene-thumb" aria-hidden="true">
-                <span className="scene-sky" />
-                <span className="scene-mass scene-mass-a" />
-                <span className="scene-mass scene-mass-b" />
-                <span className="scene-light scene-light-a" />
-                <span className="scene-light scene-light-b" />
-                <span className="scene-ground" />
-              </span>
-              <span className="style-copy">
-                <strong>{style.title}</strong>
-                <small>{style.subtitle}</small>
-              </span>
-            </button>
-          ))}
+      <section className="scene-mode-panel" aria-label="场景模式">
+        <div className="section-title">场景模式</div>
+        <div className="scene-mode-switch" role="group" aria-label="选择场景模式">
+          <button
+            className={isOutdoor ? "scene-mode-button is-active" : "scene-mode-button"}
+            type="button"
+            onClick={() => onSceneModeChange("outdoor")}
+          >
+            <CloudSun size={16} aria-hidden="true" />
+            室外照明
+          </button>
+          <button
+            className={!isOutdoor ? "scene-mode-button is-active" : "scene-mode-button"}
+            type="button"
+            onClick={() => onSceneModeChange("indoor")}
+          >
+            <Building2 size={16} aria-hidden="true" />
+            室内照明
+          </button>
         </div>
+
+        {isOutdoor ? (
+          <div className="scene-mode-options">
+            <ModeOptionGroup
+              label="季节"
+              options={outdoorSceneOptions.seasons}
+              value={sceneModeSelection.outdoor.season}
+              onChange={(value) => onOutdoorOptionChange("season", value)}
+            />
+            <ModeOptionGroup
+              label="时间"
+              options={outdoorSceneOptions.timeRanges}
+              value={sceneModeSelection.outdoor.timeRange}
+              onChange={(value) => onOutdoorOptionChange("timeRange", value)}
+            />
+            <ModeOptionGroup
+              label="气候"
+              options={outdoorSceneOptions.weathers}
+              value={sceneModeSelection.outdoor.weather}
+              onChange={(value) => onOutdoorOptionChange("weather", value)}
+            />
+          </div>
+        ) : (
+          <div className="indoor-pending" role="status">
+            室内照明预设待配置，当前先测试室外照明。
+          </div>
+        )}
       </section>
 
-      <section className="project-brief" aria-label="项目状态">
-        <div className="section-title">项目状态</div>
-        <div className="brief-row">
-          <span>当前项目</span>
-          <strong>未命名夜景项目</strong>
-        </div>
-        <div className="brief-row">
-          <span>生成策略</span>
-          <strong>保结构 · 调灯光</strong>
-        </div>
+      <section className="generation-history-panel" aria-label="生成历史记录">
+        <div className="section-title">生成历史</div>
+        {generationHistory.length > 0 ? (
+          <div className="generation-history-list">
+            {generationHistory.map((item) => (
+              <button
+                className={
+                  item.id === activeHistoryId
+                    ? "history-card is-active"
+                    : "history-card"
+                }
+                key={item.id}
+                type="button"
+                onClick={() => onHistorySelect(item)}
+              >
+                <span className="history-thumb" aria-hidden="true">
+                  <img src={item.imageUrl} alt="" />
+                </span>
+                <span className="history-copy">
+                  <strong>{item.title}</strong>
+                  <small>{item.subtitle}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="history-empty">生成后的方案会自动保存在这里。</div>
+        )}
       </section>
     </aside>
+  );
+}
+
+interface ModeOptionGroupProps<T extends string> {
+  label: string;
+  options: T[];
+  value: T;
+  onChange: (value: T) => void;
+}
+
+function ModeOptionGroup<T extends string>({
+  label,
+  options,
+  value,
+  onChange
+}: ModeOptionGroupProps<T>) {
+  return (
+    <div className="mode-option-group">
+      <span>{label}</span>
+      <div className="mode-chip-list" role="group" aria-label={label}>
+        {options.map((option) => (
+          <button
+            className={option === value ? "mode-chip is-active" : "mode-chip"}
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

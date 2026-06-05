@@ -1,13 +1,13 @@
 import { useRef, useState } from "react";
 import {
   ApiClientError,
-  generateNightRender,
-  optimizePrompt
+  generateNightRender
 } from "./api/nightRenderClient";
 import { buildNightRenderApiPayload } from "./api/nightRenderPayload";
 import {
+  buildSceneModePrompt,
   defaultReferences,
-  initialPrompt,
+  defaultSceneModeSelection,
   styleReferences
 } from "./data";
 import {
@@ -26,20 +26,42 @@ import type {
   CanvasTool,
   CanvasGenerationContext,
   ExportRequest,
+  GenerationHistoryItem,
   LightingMoodTemplate,
+  OutdoorSeason,
+  OutdoorTimeRange,
+  OutdoorWeather,
   ReferenceImage,
+  SceneMode,
+  SceneModeSelection,
   SceneType
 } from "./types/nightRender";
 import "./styles.css";
+
+function mapOutdoorTimeRangeToCanvasRange(
+  value: OutdoorTimeRange
+): CanvasGenerationContext["timeRange"] {
+  if (value === "17:00-19:00") {
+    return "蓝调时刻 18:00-19:00";
+  }
+
+  if (value === "19:00-20:00" || value === "20:00-22:00") {
+    return "入夜商业 19:00-21:00";
+  }
+
+  return "深夜静谧 22:00-24:00";
+}
 
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => loadCurrentUser());
   const [references, setReferences] = useState<ReferenceImage[]>(defaultReferences);
   const [primaryImageFile, setPrimaryImageFile] = useState<File>();
-  const [selectedStyleReference, setSelectedStyleReference] = useState(styleReferences[0]);
-  const [sceneType, setSceneType] = useState<SceneType>(styleReferences[0].sceneType);
+  const selectedStyleReference = styleReferences[0];
+  const [sceneModeSelection, setSceneModeSelection] =
+    useState<SceneModeSelection>(defaultSceneModeSelection);
+  const [sceneType, setSceneType] = useState<SceneType>("建筑立面夜景");
   const [selectedTemplate, setSelectedTemplate] =
-    useState<LightingMoodTemplate>(styleReferences[0].template);
+    useState<LightingMoodTemplate>("高级蓝调夜景");
   const [activeFixture, setActiveFixture] = useState("洗墙灯");
   const [negativePrompts, setNegativePrompts] = useState([
     "不改变建筑结构",
@@ -53,12 +75,14 @@ function App() {
   ]);
   const [activeTool, setActiveTool] = useState<CanvasTool>("标注灯位");
   const [compare, setCompare] = useState(48);
-  const [prompt, setPrompt] = useState(initialPrompt);
-  const [outputSize, setOutputSize] = useState<ExportRequest["type"]>("4K");
+  const [outputSize, setOutputSize] = useState<ExportRequest["type"]>("2K");
   const [resultImageUrl, setResultImageUrl] = useState<string>();
+  const [generationHistory, setGenerationHistory] = useState<GenerationHistoryItem[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string>();
   const [canvasGenerationContext, setCanvasGenerationContext] =
     useState<CanvasGenerationContext>({
       timeRange: "蓝调时刻 18:00-19:00",
+      activeTool: "标注灯位",
       annotations: [],
       viewBox: {
         width: 1000,
@@ -84,6 +108,7 @@ function App() {
     if (id === "primary") {
       setPrimaryImageFile(file.type.startsWith("image/") ? file : undefined);
       setResultImageUrl(undefined);
+      setActiveHistoryId(undefined);
     }
 
     setReferences((current) =>
@@ -110,6 +135,7 @@ function App() {
     if (id === "primary") {
       setPrimaryImageFile(undefined);
       setResultImageUrl(undefined);
+      setActiveHistoryId(undefined);
       setApiStatus({
         state: "idle",
         message: "主图已移除，可重新上传素材。"
@@ -148,6 +174,14 @@ function App() {
     }
 
     if (!currentUser) {
+      return;
+    }
+
+    if (sceneModeSelection.mode !== "outdoor") {
+      setApiStatus({
+        state: "error",
+        message: "室内照明预设尚未配置，请先选择室外照明测试。"
+      });
       return;
     }
 
@@ -200,7 +234,7 @@ function App() {
         template: selectedTemplate,
         styleReference: selectedStyleReference,
         canvas: canvasGenerationContext,
-        prompt,
+        prompt: buildSceneModePrompt(sceneModeSelection),
         negativePrompts,
         outputSize
       });
@@ -224,6 +258,21 @@ function App() {
       }
 
       setResultImageUrl(response.resultImageUrl);
+      const historyItem: GenerationHistoryItem = {
+        id: response.versionId ?? `history-${Date.now()}`,
+        title: `${sceneModeSelection.outdoor.timeRange} · ${sceneModeSelection.outdoor.weather}`,
+        subtitle: `${sceneModeSelection.outdoor.season} / ${outputSize} / ${selectedTemplate}`,
+        imageUrl: response.resultImageUrl,
+        outputSize,
+        createdAt: new Date().toISOString()
+      };
+      setGenerationHistory((current) => [
+        historyItem,
+        ...current.filter(
+          (item) => item.id !== historyItem.id && item.imageUrl !== historyItem.imageUrl
+        )
+      ].slice(0, 8));
+      setActiveHistoryId(historyItem.id);
       setCompare(18);
       setApiStatus({
         state: "success",
@@ -242,39 +291,6 @@ function App() {
       if (generationAbortRef.current === controller) {
         generationAbortRef.current = null;
       }
-    }
-  }
-
-  async function handleOptimizePrompt() {
-    const promptParts = [
-      `场景：${sceneType}`,
-      `风格：${selectedTemplate}`,
-      `时间段：${canvasGenerationContext.timeRange}`,
-      `灯具：${activeFixture}`,
-      prompt.trim(),
-      `负面约束：${negativePrompts.join("、")}`
-    ];
-
-    const localPrompt = promptParts.filter(Boolean).join("；");
-
-    setApiStatus({
-      state: "loading",
-      message: "正在整理生成指令..."
-    });
-
-    try {
-      const response = await optimizePrompt(localPrompt);
-      setPrompt(response.optimizedPrompt);
-      setApiStatus({
-        state: "success",
-        message: "指令已通过 API 整理，可直接生成夜景。"
-      });
-    } catch {
-      setPrompt(localPrompt);
-      setApiStatus({
-        state: "success",
-        message: "API 暂不可用，已先按本地规则整理指令。"
-      });
     }
   }
 
@@ -320,15 +336,62 @@ function App() {
     }
   }
 
-  function handleStyleSelect(style: typeof selectedStyleReference) {
-    setSelectedStyleReference(style);
-    setSceneType(style.sceneType);
-    setSelectedTemplate(style.template);
-  }
-
   function handleFixtureChange(fixture: string) {
     setActiveFixture(fixture);
     setActiveTool("标注灯位");
+  }
+
+  function handleHistorySelect(item: GenerationHistoryItem) {
+    setResultImageUrl(item.imageUrl);
+    setActiveHistoryId(item.id);
+    setCompare(18);
+    setApiStatus({
+      state: "success",
+      message: "已切换到历史生成方案。"
+    });
+  }
+
+  function handleSceneModeChange(mode: SceneMode) {
+    setSceneModeSelection((current) => ({
+      ...current,
+      mode
+    }));
+
+    if (mode === "outdoor") {
+      setSceneType("建筑立面夜景");
+      setSelectedTemplate("高级蓝调夜景");
+      setCanvasGenerationContext((current) => ({
+        ...current,
+        timeRange: mapOutdoorTimeRangeToCanvasRange(sceneModeSelection.outdoor.timeRange)
+      }));
+      return;
+    }
+
+    setSceneType("商场室内");
+    setSelectedTemplate("内透灯光增强");
+  }
+
+  function handleOutdoorOptionChange(
+    key: keyof SceneModeSelection["outdoor"],
+    value: OutdoorSeason | OutdoorTimeRange | OutdoorWeather
+  ) {
+    setSceneModeSelection((current) => ({
+      mode: "outdoor",
+      outdoor: {
+        ...current.outdoor,
+        [key]: value
+      } as SceneModeSelection["outdoor"]
+    }));
+
+    if (key === "timeRange") {
+      setCanvasGenerationContext((current) => ({
+        ...current,
+        timeRange: mapOutdoorTimeRangeToCanvasRange(value as OutdoorTimeRange)
+      }));
+    }
+
+    setSceneType("建筑立面夜景");
+    setSelectedTemplate("高级蓝调夜景");
   }
 
   function handleRechargeCredits(amount: number) {
@@ -379,8 +442,12 @@ function App() {
       <div className="workspace">
         <LeftPanel
           references={references}
-          selectedStyleId={selectedStyleReference.id}
-          onStyleSelect={handleStyleSelect}
+          sceneModeSelection={sceneModeSelection}
+          generationHistory={generationHistory}
+          activeHistoryId={activeHistoryId}
+          onHistorySelect={handleHistorySelect}
+          onOutdoorOptionChange={handleOutdoorOptionChange}
+          onSceneModeChange={handleSceneModeChange}
           onUpload={handleUpload}
           onRemoveUpload={handleRemoveUpload}
         />
@@ -401,7 +468,6 @@ function App() {
           canExport={canExport}
           negativePrompts={negativePrompts}
           outputSize={outputSize}
-          prompt={prompt}
           sceneType={sceneType}
           selectedTemplate={selectedTemplate}
           canGenerate={canGenerate}
@@ -411,9 +477,7 @@ function App() {
           onNegativeToggle={(item) =>
             setNegativePrompts((current) => toggleListValue(current, item))
           }
-          onOptimizePrompt={handleOptimizePrompt}
           onOutputSizeChange={setOutputSize}
-          onPromptChange={setPrompt}
           onSceneChange={setSceneType}
         />
       </div>

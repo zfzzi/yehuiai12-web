@@ -40,6 +40,7 @@ function formatDateTime(dateTime: string) {
 
 export function TopBar({ userProfile, onLogout, onRechargeCredits }: TopBarProps) {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isProfileDetailsOpen, setIsProfileDetailsOpen] = useState(false);
   const [lastRechargeAmount, setLastRechargeAmount] = useState<number | null>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -212,10 +213,31 @@ export function TopBar({ userProfile, onLogout, onRechargeCredits }: TopBarProps
               </div>
 
               <div className="account-menu-actions">
-                <button className="account-menu-row" type="button">
+                <button
+                  aria-expanded={isProfileDetailsOpen}
+                  className="account-menu-row"
+                  type="button"
+                  onClick={() => setIsProfileDetailsOpen((current) => !current)}
+                >
                   <User size={15} aria-hidden="true" />
-                  <span>用户资料</span>
+                  <span>{isProfileDetailsOpen ? "收起资料" : "完整资料"}</span>
                 </button>
+                {isProfileDetailsOpen ? (
+                  <div className="account-detail-box">
+                    <div>
+                      <span>注册时间</span>
+                      <strong>{formatDateTime(userProfile.createdAt)}</strong>
+                    </div>
+                    <div>
+                      <span>最近登录</span>
+                      <strong>{formatDateTime(userProfile.lastLoginAt)}</strong>
+                    </div>
+                    <div>
+                      <span>累计充值</span>
+                      <strong>{userProfile.totalRecharged} 积分</strong>
+                    </div>
+                  </div>
+                ) : null}
                 <button className="account-menu-row danger" type="button" onClick={onLogout}>
                   <LogOut size={15} aria-hidden="true" />
                   <span>退出登录</span>

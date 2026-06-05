@@ -664,6 +664,38 @@ p {
   background: oklch(0.16 0.035 28 / 0.45);
 }
 
+.account-detail-box {
+  display: grid;
+  gap: 7px;
+  padding: 8px 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: oklch(0.095 0.008 265);
+}
+
+.account-detail-box div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account-detail-box span {
+  flex: 0 0 auto;
+  color: var(--quiet);
+  font-size: 0.7rem;
+}
+
+.account-detail-box strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workspace {
   flex: 1;
   display: grid;

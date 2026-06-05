@@ -6,14 +6,12 @@ import {
   Lightbulb,
   Loader2,
   Send,
-  SlidersHorizontal,
   SquareStack,
   Wand2
 } from "lucide-react";
 import { fixtureGroups, negativePromptOptions, sceneTypes } from "../data";
 import type {
   ExportRequest,
-  LightingParams,
   LightingMoodTemplate,
   SceneType
 } from "../types/nightRender";
@@ -23,59 +21,6 @@ const outputSizes: ExportRequest["type"][] = [
   "4K",
   "6K",
   "8K"
-];
-
-const lightingControls: Array<{
-  key: keyof Pick<
-    LightingParams,
-    "colorTemperature" | "brightness" | "halo" | "interiorGlow" | "glareControl"
-  >;
-  label: string;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-}> = [
-  {
-    key: "colorTemperature",
-    label: "色温",
-    min: 2200,
-    max: 6500,
-    step: 100,
-    unit: "K"
-  },
-  {
-    key: "brightness",
-    label: "亮度",
-    min: 0,
-    max: 100,
-    step: 1,
-    unit: "%"
-  },
-  {
-    key: "halo",
-    label: "光晕",
-    min: 0,
-    max: 100,
-    step: 1,
-    unit: "%"
-  },
-  {
-    key: "interiorGlow",
-    label: "内透",
-    min: 0,
-    max: 100,
-    step: 1,
-    unit: "%"
-  },
-  {
-    key: "glareControl",
-    label: "眩光控制",
-    min: 0,
-    max: 100,
-    step: 1,
-    unit: "%"
-  }
 ];
 
 interface ApiStatus {
@@ -88,7 +33,6 @@ interface InspectorPanelProps {
   activeFixture: string;
   canExport: boolean;
   canGenerate: boolean;
-  lightingParams: LightingParams;
   negativePrompts: string[];
   outputSize: ExportRequest["type"];
   prompt: string;
@@ -97,7 +41,6 @@ interface InspectorPanelProps {
   onExport: () => void;
   onFixtureChange: (fixture: string) => void;
   onGenerate: () => void;
-  onLightingParamChange: (key: keyof LightingParams, value: number) => void;
   onNegativeToggle: (prompt: string) => void;
   onOptimizePrompt: () => void;
   onOutputSizeChange: (size: ExportRequest["type"]) => void;
@@ -110,7 +53,6 @@ export function InspectorPanel({
   activeFixture,
   canExport,
   canGenerate,
-  lightingParams,
   negativePrompts,
   outputSize,
   prompt,
@@ -119,7 +61,6 @@ export function InspectorPanel({
   onExport,
   onFixtureChange,
   onGenerate,
-  onLightingParamChange,
   onNegativeToggle,
   onOptimizePrompt,
   onOutputSizeChange,
@@ -179,37 +120,6 @@ export function InspectorPanel({
             </div>
           </div>
         ))}
-      </section>
-
-      <section className="control-section lighting-section">
-        <div className="section-title with-icon">
-          <SlidersHorizontal size={14} aria-hidden="true" />
-          灯光参数
-        </div>
-        <div className="lighting-control-list">
-          {lightingControls.map((control) => (
-            <label className="range-field" key={control.key}>
-              <span>
-                <strong>{control.label}</strong>
-                <em>
-                  {lightingParams[control.key]}
-                  {control.unit}
-                </em>
-              </span>
-              <input
-                aria-label={control.label}
-                max={control.max}
-                min={control.min}
-                step={control.step}
-                type="range"
-                value={lightingParams[control.key]}
-                onChange={(event) =>
-                  onLightingParamChange(control.key, Number(event.currentTarget.value))
-                }
-              />
-            </label>
-          ))}
-        </div>
       </section>
 
       <section className="control-section prompt-section">

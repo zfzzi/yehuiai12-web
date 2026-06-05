@@ -1,6 +1,5 @@
 import { type PointerEvent, useEffect, useRef, useState } from "react";
 import {
-  BadgeCheck,
   Blend,
   Crosshair,
   Eraser,
@@ -14,18 +13,15 @@ import {
   ZoomIn,
   ZoomOut
 } from "lucide-react";
-import type { CanvasLock, CanvasTool } from "../types/nightRender";
-import { canvasLocks } from "../data";
+import type { CanvasTool } from "../types/nightRender";
 
 interface CanvasStageProps {
   activeFixture: string;
   activeTool: CanvasTool;
   compare: number;
-  locks: CanvasLock[];
   resultImageUrl?: string;
   sourceImageUrl?: string;
   onCompareChange: (value: number) => void;
-  onLockToggle: (lock: CanvasLock) => void;
   onPrimaryImageUpload: (file: File) => void;
   onToolChange: (tool: CanvasTool) => void;
 }
@@ -290,11 +286,9 @@ export function CanvasStage({
   activeFixture,
   activeTool,
   compare,
-  locks,
   resultImageUrl,
   sourceImageUrl,
   onCompareChange,
-  onLockToggle,
   onPrimaryImageUpload,
   onToolChange
 }: CanvasStageProps) {
@@ -1264,7 +1258,7 @@ export function CanvasStage({
                   <ImagePlus size={26} />
                 </div>
                 <h2>上传主图开始生成夜景</h2>
-                <p>支持建筑、景观、室内和装置照片。上传后可标注灯位、锁定结构并设置照明参数。</p>
+                <p>支持建筑、景观、室内和装置照片。上传后可标注灯位并设置生成参数。</p>
                 <div className="empty-canvas-steps">
                   <span>1 上传主图</span>
                   <span>2 选择参考风格</span>
@@ -1310,24 +1304,6 @@ export function CanvasStage({
           />
           <span>{hasResult ? "生成图" : "待生成"}</span>
         </div>
-      </div>
-
-      <div className="canvas-locks" aria-label="结构锁定">
-        <div className="lock-title">
-          <BadgeCheck size={15} aria-hidden="true" />
-          保护约束
-        </div>
-        {canvasLocks.map((lock) => (
-          <button
-            className={locks.includes(lock) ? "lock-chip is-active" : "lock-chip"}
-            key={lock}
-            type="button"
-            onClick={() => onLockToggle(lock)}
-          >
-            <LockKeyhole size={13} aria-hidden="true" />
-            锁定{lock}
-          </button>
-        ))}
       </div>
     </main>
   );

@@ -495,7 +495,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             </div>
 
             <Button
-              className="mt-1 h-12 bg-gradient-to-r from-primary via-[#fbbf24] to-[#38bdf8] text-base font-semibold text-[#0f172a] shadow-auth-glow hover:scale-[1.018]"
+              className="mt-1 h-12 bg-gradient-to-r from-primary via-[oklch(0.62_0.19_252)] to-[oklch(0.72_0.16_212)] text-base shadow-auth-glow hover:scale-[1.018]"
               disabled={isSubmitting}
               type="submit"
             >

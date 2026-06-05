@@ -1,7 +1,5 @@
 import type {
-  CanvasLock,
   LightingMoodTemplate,
-  LightingParams,
   ReferenceImage,
   SceneType,
   StyleReference
@@ -61,36 +59,12 @@ export const negativePromptOptions = [
   "不改变人物和树木"
 ];
 
-export const canvasLocks: CanvasLock[] = [
-  "建筑结构",
-  "透视关系",
-  "人物",
-  "树木",
-  "地面铺装",
-  "天空",
-  "灯具"
-];
-
 export const defaultReferences: ReferenceImage[] = [
   {
     id: "primary",
     role: "primary",
     label: "主图上传",
     hint: "上传建筑、景观或室内照片",
-    status: "missing"
-  },
-  {
-    id: "fixturePlan",
-    role: "fixturePlan",
-    label: "灯具布点图",
-    hint: "上传点位、方向、洗墙范围",
-    status: "missing"
-  },
-  {
-    id: "floorPlan",
-    role: "floorPlan",
-    label: "平面图上传",
-    hint: "上传平面或立面辅助图",
     status: "missing"
   }
 ];
@@ -133,19 +107,6 @@ export const styleReferences: StyleReference[] = [
     tone: "commercial"
   }
 ];
-
-export const defaultParams: LightingParams = {
-  colorTemperature: 3500,
-  brightness: 62,
-  halo: 36,
-  interiorGlow: 58,
-  shadow: 44,
-  blueTone: 64,
-  warmLight: 48,
-  glareControl: 72,
-  overexposureRepair: 40,
-  warmCoolContrast: "中"
-};
 
 export const initialPrompt =
   "生成傍晚 18 点到 19 点的蓝调夜景效果，建筑立面偏冷蓝，底部洗墙灯为暖白色，增加室内内透，但不要改变建筑结构、树木、地砖和透视关系。";

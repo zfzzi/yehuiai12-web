@@ -7,34 +7,34 @@ export default {
   theme: {
     extend: {
       colors: {
-        border: "#243349",
-        input: "#1E293B",
-        ring: "#F59E0B",
-        background: "#0F172A",
-        foreground: "#F8FAFC",
+        border: "oklch(0.24 0.026 265)",
+        input: "oklch(0.18 0.02 265)",
+        ring: "oklch(0.72 0.16 212)",
+        background: "oklch(0.075 0 0)",
+        foreground: "oklch(0.93 0.012 260)",
         primary: {
-          DEFAULT: "#F59E0B",
-          foreground: "#0F172A"
+          DEFAULT: "oklch(0.58 0.19 270)",
+          foreground: "oklch(0.98 0.004 260)"
         },
         secondary: {
-          DEFAULT: "#16233A",
-          foreground: "#F8FAFC"
+          DEFAULT: "oklch(0.14 0.016 265)",
+          foreground: "oklch(0.9 0.012 260)"
         },
         muted: {
-          DEFAULT: "#152033",
-          foreground: "#A5B4C8"
+          DEFAULT: "oklch(0.13 0.014 260)",
+          foreground: "oklch(0.68 0.02 255)"
         },
         accent: {
-          DEFAULT: "#0B3B5A",
-          foreground: "#BAE6FD"
+          DEFAULT: "oklch(0.18 0.045 220)",
+          foreground: "oklch(0.86 0.09 210)"
         },
         destructive: {
           DEFAULT: "oklch(0.62 0.16 28)",
           foreground: "oklch(0.98 0.004 260)"
         },
         card: {
-          DEFAULT: "#111C31",
-          foreground: "#F8FAFC"
+          DEFAULT: "oklch(0.105 0.012 268)",
+          foreground: "oklch(0.93 0.012 260)"
         }
       },
       borderRadius: {
@@ -43,8 +43,8 @@ export default {
         sm: "0.4rem"
       },
       boxShadow: {
-        "auth-card": "0 24px 80px rgb(0 0 0 / 0.42), 0 0 0 1px rgb(245 158 11 / 0.2)",
-        "auth-glow": "0 12px 38px rgb(245 158 11 / 0.25)"
+        "auth-card": "0 24px 80px oklch(0 0 0 / 0.42), 0 0 0 1px oklch(0.34 0.06 268 / 0.22)",
+        "auth-glow": "0 12px 38px oklch(0.58 0.19 270 / 0.28)"
       },
       keyframes: {
         "auth-fade": {

@@ -12,26 +12,26 @@
   color: var(--text);
   background: var(--bg);
 
-  --bg: #0f172a;
-  --panel: #111c31;
-  --panel-strong: #17233a;
-  --panel-soft: #0b1324;
-  --line: #2a3a52;
-  --line-soft: #1e2b42;
-  --text: #f8fafc;
-  --muted: #a5b4c8;
-  --quiet: #64748b;
-  --primary: #f59e0b;
-  --primary-strong: #fbbf24;
-  --cyan: #38bdf8;
-  --warm: #f59e0b;
+  --bg: oklch(0.075 0 0);
+  --panel: oklch(0.115 0.014 270);
+  --panel-strong: oklch(0.15 0.018 270);
+  --panel-soft: oklch(0.105 0.01 250);
+  --line: oklch(0.27 0.028 265);
+  --line-soft: oklch(0.2 0.022 265);
+  --text: oklch(0.93 0.012 260);
+  --muted: oklch(0.68 0.02 255);
+  --quiet: oklch(0.5 0.02 255);
+  --primary: oklch(0.58 0.19 270);
+  --primary-strong: oklch(0.64 0.2 268);
+  --cyan: oklch(0.72 0.16 212);
+  --warm: oklch(0.79 0.13 74);
   --danger: oklch(0.62 0.16 28);
   --success: oklch(0.74 0.14 154);
   --radius: 8px;
   --radius-small: 6px;
   --topbar: 58px;
-  --left: 326px;
-  --right: 356px;
+  --left: 300px;
+  --right: 342px;
 }
 
 * {
@@ -50,9 +50,8 @@ body {
   min-width: 320px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 52% 8%, rgb(245 158 11 / 0.12), transparent 30rem),
-    radial-gradient(circle at 12% 12%, rgb(56 189 248 / 0.1), transparent 24rem),
-    linear-gradient(180deg, #0b1220, var(--bg) 32rem);
+    radial-gradient(circle at 52% 8%, oklch(0.16 0.06 268 / 0.22), transparent 32rem),
+    linear-gradient(180deg, oklch(0.082 0.002 260), var(--bg) 32rem);
 }
 
 button,
@@ -91,10 +90,10 @@ summary:focus-visible {
 .auth-drift-layer {
   background:
     radial-gradient(circle at 22% 18%, oklch(0.72 0.16 212 / 0.2) 0 1px, transparent 2px),
-    radial-gradient(circle at 74% 24%, rgb(245 158 11 / 0.22) 0 1px, transparent 2px),
-    radial-gradient(circle at 60% 72%, rgb(245 158 11 / 0.14) 0 1px, transparent 2px),
-    radial-gradient(circle at 50% 8%, rgb(15 23 42 / 0.92), transparent 34rem),
-    linear-gradient(180deg, #0f172a, #020617);
+    radial-gradient(circle at 74% 24%, oklch(0.64 0.2 268 / 0.2) 0 1px, transparent 2px),
+    radial-gradient(circle at 60% 72%, oklch(0.79 0.13 74 / 0.14) 0 1px, transparent 2px),
+    radial-gradient(circle at 50% 8%, oklch(0.22 0.08 268 / 0.46), transparent 34rem),
+    linear-gradient(180deg, oklch(0.08 0.006 260), oklch(0.045 0 0));
   background-size: auto, auto, auto, auto, auto;
   animation: light-drift 16s ease-in-out infinite;
 }
@@ -110,14 +109,14 @@ summary:focus-visible {
 .auth-drift-layer::before {
   background:
     linear-gradient(115deg, transparent 12%, rgb(56 189 248 / 0.08) 42%, transparent 68%),
-    radial-gradient(circle at 78% 72%, rgb(245 158 11 / 0.14), transparent 20rem);
+    radial-gradient(circle at 78% 72%, oklch(0.58 0.19 270 / 0.18), transparent 20rem);
   filter: blur(1px);
   opacity: 0.72;
 }
 
 .auth-drift-layer::after {
   background-image:
-    radial-gradient(circle, rgb(245 158 11 / 0.34) 0 1px, transparent 1.6px),
+    radial-gradient(circle, oklch(0.78 0.13 74 / 0.38) 0 1px, transparent 1.6px),
     radial-gradient(circle, oklch(0.72 0.16 212 / 0.28) 0 1px, transparent 1.6px);
   background-position: 12% 34%, 82% 18%;
   background-size: 112px 112px, 156px 156px;
@@ -157,7 +156,7 @@ p {
   align-items: center;
   padding: 0 18px;
   border-bottom: 1px solid var(--line-soft);
-  background: rgb(15 23 42 / 0.96);
+  background: oklch(0.095 0.008 270 / 0.94);
   backdrop-filter: blur(14px);
   position: sticky;
   top: 0;
@@ -167,10 +166,8 @@ p {
 .brand-block,
 .project-name,
 .top-actions,
-.scene-tabs,
 .canvas-meta,
 .prompt-actions,
-.lock-title,
 .section-title.with-icon {
   display: flex;
   align-items: center;
@@ -189,7 +186,7 @@ p {
   place-items: center;
   color: white;
   background:
-    linear-gradient(135deg, var(--primary), #38bdf8),
+    linear-gradient(135deg, var(--primary), oklch(0.46 0.16 292)),
     var(--primary);
 }
 
@@ -207,22 +204,11 @@ p {
   white-space: nowrap;
 }
 
-.scene-tabs {
-  min-width: 0;
-  gap: 4px;
-  padding: 3px;
-  border: 1px solid var(--line-soft);
-  border-radius: 8px;
-  background: oklch(0.085 0.006 260);
-  overflow-x: auto;
-}
-
 .tab,
 .ghost-button,
 .icon-button,
 .tool-button,
 .view-fit-button,
-.lock-chip,
 .fixture-pill,
 .export-button,
 .recent-row {
@@ -292,14 +278,14 @@ p {
 }
 
 .primary-button {
-  color: #0f172a;
-  border: 1px solid rgb(251 191 36 / 0.76);
+  color: white;
+  border: 1px solid oklch(0.68 0.18 270);
   background: linear-gradient(180deg, var(--primary-strong), var(--primary));
   font-weight: 720;
 }
 
 .primary-button:hover {
-  background: linear-gradient(180deg, #fde68a, var(--primary));
+  background: linear-gradient(180deg, oklch(0.68 0.19 268), var(--primary));
 }
 
 .icon-button {
@@ -335,9 +321,9 @@ p {
 }
 
 .project-status.is-ready {
-  color: #fed7aa;
-  border-color: rgb(245 158 11 / 0.4);
-  background: rgb(245 158 11 / 0.1);
+  color: oklch(0.86 0.09 210);
+  border-color: oklch(0.36 0.08 218);
+  background: oklch(0.18 0.045 220 / 0.72);
 }
 
 .project-status.is-ready svg {
@@ -396,8 +382,8 @@ p {
   place-items: center;
   color: white;
   background:
-    radial-gradient(circle at 35% 24%, rgb(56 189 248 / 0.92), transparent 36%),
-    linear-gradient(135deg, var(--primary), #0f3d5e);
+    radial-gradient(circle at 35% 24%, oklch(0.72 0.16 212 / 0.92), transparent 36%),
+    linear-gradient(135deg, var(--primary), oklch(0.42 0.13 292));
 }
 
 .account-avatar {
@@ -491,8 +477,8 @@ p {
   padding: 0 7px;
   border: 1px solid oklch(0.35 0.08 265);
   border-radius: 999px;
-  color: #fed7aa;
-  background: rgb(245 158 11 / 0.1);
+  color: var(--cyan);
+  background: oklch(0.16 0.035 260);
   font-size: 0.7rem;
 }
 
@@ -545,8 +531,8 @@ p {
   border-radius: 10px;
   color: var(--text);
   background:
-    radial-gradient(circle at 86% 20%, rgb(245 158 11 / 0.18), transparent 7rem),
-    linear-gradient(135deg, #17233a, #0b1324);
+    radial-gradient(circle at 86% 20%, oklch(0.72 0.16 212 / 0.2), transparent 7rem),
+    linear-gradient(135deg, oklch(0.19 0.038 268), oklch(0.13 0.02 250));
 }
 
 .account-credit-panel span {
@@ -633,9 +619,9 @@ p {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid rgb(251 191 36 / 0.76);
+  border: 1px solid oklch(0.68 0.18 270);
   border-radius: 8px;
-  color: #0f172a;
+  color: white;
   background: linear-gradient(180deg, var(--primary-strong), var(--primary));
   font-size: 0.82rem;
   font-weight: 720;
@@ -750,8 +736,8 @@ p {
 }
 
 .global-toast.state-success {
-  color: #fed7aa;
-  border-color: rgb(245 158 11 / 0.5);
+  color: oklch(0.86 0.09 210);
+  border-color: oklch(0.36 0.08 218);
 }
 
 .global-toast.state-error {
@@ -766,9 +752,9 @@ p {
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas:
     "left canvas inspector";
-  gap: 12px;
+  gap: 10px;
   min-height: 0;
-  padding: 12px;
+  padding: 10px;
 }
 
 .panel,
@@ -776,7 +762,7 @@ p {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background:
-    linear-gradient(180deg, rgb(17 28 49 / 0.98), rgb(11 19 36 / 0.98)),
+    linear-gradient(180deg, oklch(0.13 0.012 268 / 0.98), oklch(0.095 0.006 260 / 0.98)),
     var(--panel);
 }
 
@@ -784,7 +770,7 @@ p {
   grid-area: left;
   min-height: 0;
   overflow: hidden auto;
-  padding: 14px;
+  padding: 13px;
 }
 
 .panel-head {
@@ -810,17 +796,17 @@ p {
 
 .upload-list {
   display: grid;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .upload-card {
-  min-height: 86px;
+  min-height: 78px;
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr) auto;
+  grid-template-columns: 68px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 11px;
-  padding: 10px;
+  gap: 10px;
+  padding: 9px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: oklch(0.088 0.006 260);
@@ -841,8 +827,8 @@ p {
 }
 
 .upload-preview {
-  width: 78px;
-  height: 58px;
+  width: 68px;
+  height: 50px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -858,16 +844,6 @@ p {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.preview-fixturePlan,
-.preview-floorPlan {
-  background:
-    linear-gradient(oklch(0.62 0.11 214 / 0.18) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(0.62 0.11 214 / 0.16) 1px, transparent 1px),
-    radial-gradient(circle at 70% 35%, oklch(0.78 0.12 75 / 0.2), transparent 18px),
-    oklch(0.075 0.008 240);
-  background-size: 16px 16px, 16px 16px, auto, auto;
 }
 
 .upload-copy {
@@ -932,9 +908,8 @@ p {
 }
 
 .style-reference-panel,
-.project-brief,
 .control-section {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .section-title {
@@ -950,14 +925,16 @@ p {
 
 .style-reference-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
 
 .style-reference-card {
   min-width: 0;
   display: grid;
-  gap: 7px;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
   padding: 8px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
@@ -973,17 +950,17 @@ p {
 .style-reference-card:hover,
 .style-reference-card.is-active {
   color: var(--text);
-  border-color: rgb(245 158 11 / 0.62);
-  background: rgb(245 158 11 / 0.08);
+  border-color: oklch(0.45 0.11 270);
+  background: oklch(0.13 0.025 268);
 }
 
 .style-reference-card.is-active {
-  box-shadow: inset 0 0 0 1px rgb(245 158 11 / 0.32);
+  box-shadow: inset 0 0 0 1px oklch(0.56 0.16 270 / 0.55);
 }
 
 .style-thumb {
   position: relative;
-  height: 58px;
+  height: 52px;
   overflow: hidden;
   border-radius: 7px;
   isolation: isolate;
@@ -1185,35 +1162,19 @@ p {
 
 .style-copy {
   display: grid;
-  gap: 2px;
+  gap: 3px;
+  min-width: 0;
 }
 
 .style-copy strong {
   color: var(--text);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
 }
 
 .style-copy small {
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   line-height: 1.35;
-}
-
-.brief-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 32px;
-  border-top: 1px solid var(--line-soft);
-  color: var(--muted);
-  font-size: 0.74rem;
-}
-
-.brief-row strong {
-  color: var(--text);
-  font-size: 0.74rem;
-  font-weight: 620;
 }
 
 .recent-row {
@@ -1256,7 +1217,7 @@ p {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  padding: 12px;
+  padding: 11px;
   overflow: hidden;
 }
 
@@ -1283,12 +1244,12 @@ p {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
   background:
-    linear-gradient(180deg, #0b1324, #020617),
+    linear-gradient(180deg, oklch(0.115 0.01 260), oklch(0.055 0 0)),
     var(--bg);
 }
 
@@ -1319,7 +1280,7 @@ p {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   color: var(--muted);
-  background: rgb(2 6 23 / 0.72);
+  background: oklch(0.09 0.006 260 / 0.88);
 }
 
 .zoom-value {
@@ -1343,7 +1304,7 @@ p {
 
 .view-fit-button:hover:not(:disabled) {
   color: var(--text);
-  background: rgb(56 189 248 / 0.12);
+  background: oklch(0.2 0.035 268);
 }
 
 .canvas-toolbar {
@@ -1354,7 +1315,7 @@ p {
   padding: 4px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
-  background: rgb(2 6 23 / 0.72);
+  background: oklch(0.09 0.006 260 / 0.88);
 }
 
 .tool-button {
@@ -1369,8 +1330,8 @@ p {
 
 .tool-button.is-active,
 .tool-button:hover {
-  color: #0f172a;
-  background: var(--primary);
+  color: white;
+  background: oklch(0.28 0.09 268);
   font-weight: 700;
 }
 
@@ -1379,8 +1340,7 @@ p {
 }
 
 .tool-button.danger:not(:disabled):hover {
-  color: white;
-  background: #7f1d1d;
+  background: oklch(0.24 0.07 32);
 }
 
 .canvas-time-control {
@@ -1393,7 +1353,7 @@ p {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   color: var(--muted);
-  background: rgb(2 6 23 / 0.72);
+  background: oklch(0.09 0.006 260 / 0.88);
   backdrop-filter: blur(12px);
 }
 
@@ -1528,9 +1488,9 @@ p {
   pointer-events: none;
   mix-blend-mode: screen;
   background:
-    radial-gradient(circle at 48% 58%, rgb(245 158 11 / 0.18), transparent 26%),
-    linear-gradient(180deg, rgb(56 189 248 / 0.16), transparent 42%),
-    linear-gradient(0deg, rgb(245 158 11 / 0.22), transparent 34%);
+    radial-gradient(circle at 48% 58%, oklch(0.58 0.19 270 / 0.16), transparent 26%),
+    linear-gradient(180deg, oklch(0.72 0.16 212 / 0.16), transparent 42%),
+    linear-gradient(0deg, oklch(0.64 0.2 268 / 0.18), transparent 34%);
 }
 
 .before-layer {
@@ -1795,70 +1755,32 @@ input[type="range"] {
   accent-color: var(--primary-strong);
 }
 
-.canvas-locks {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 10px 3px 0;
-}
-
-.lock-title {
-  gap: 5px;
-  margin-right: 4px;
-  color: var(--muted);
-  font-size: 0.76rem;
-}
-
-.lock-chip {
-  min-height: 29px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0 8px;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  font-size: 0.73rem;
-  background: var(--panel-soft);
-}
-
-.lock-chip.is-active {
-  color: #fed7aa;
-  border-color: rgb(245 158 11 / 0.54);
-  background: rgb(245 158 11 / 0.12);
-}
-
 .inspector {
   grid-area: inspector;
   min-height: 0;
   overflow: hidden auto;
-  padding: 14px;
+  padding: 13px;
 }
 
 .setup-section,
 .fixture-section,
-.lighting-section,
 .prompt-section,
 .output-section,
 .negative-section {
   display: grid;
   gap: 10px;
-}
-
-.fixture-section,
-.lighting-section,
-.output-section,
-.negative-section {
-  padding-top: 14px;
-  border-top: 1px solid var(--line-soft);
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, oklch(0.122 0.014 268 / 0.82), oklch(0.085 0.006 260 / 0.92)),
+    var(--panel-soft);
 }
 
 .prompt-section {
-  padding: 12px;
-  border: 1px solid rgb(245 158 11 / 0.26);
-  border-radius: 8px;
+  border-color: oklch(0.28 0.045 268);
   background:
-    linear-gradient(180deg, rgb(23 35 58 / 0.8), rgb(11 19 36 / 0.92)),
+    linear-gradient(180deg, oklch(0.13 0.02 268 / 0.78), oklch(0.085 0.006 260 / 0.9)),
     var(--panel-soft);
 }
 
@@ -1893,10 +1815,10 @@ input[type="range"] {
   gap: 4px;
   margin-top: 0;
   padding: 11px 12px;
-  border: 1px solid rgb(245 158 11 / 0.3);
+  border: 1px solid oklch(0.32 0.06 270);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgb(245 158 11 / 0.13), transparent 72%),
+    linear-gradient(135deg, oklch(0.2 0.06 270 / 0.52), transparent 72%),
     oklch(0.09 0.006 260);
 }
 
@@ -1923,9 +1845,9 @@ input[type="range"] {
 
 .fixture-pill:hover,
 .fixture-pill.is-active {
-  color: #fed7aa;
-  border-color: rgb(245 158 11 / 0.54);
-  background: rgb(245 158 11 / 0.1);
+  color: var(--text);
+  border-color: oklch(0.43 0.08 270);
+  background: oklch(0.21 0.052 270 / 0.72);
 }
 
 .fixture-group {
@@ -1948,40 +1870,6 @@ input[type="range"] {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.lighting-control-list {
-  display: grid;
-  gap: 10px;
-}
-
-.range-field {
-  display: grid;
-  gap: 6px;
-  padding: 9px;
-  border: 1px solid var(--line-soft);
-  border-radius: 8px;
-  background: rgb(11 19 36 / 0.82);
-}
-
-.range-field > span {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.range-field strong {
-  color: var(--text);
-  font-size: 0.75rem;
-  font-weight: 680;
-}
-
-.range-field em {
-  color: #fed7aa;
-  font-size: 0.72rem;
-  font-style: normal;
-  font-variant-numeric: tabular-nums;
 }
 
 .prompt-box {
@@ -2016,9 +1904,9 @@ input[type="range"] {
 }
 
 .output-size-grid .export-button.is-active {
-  color: #0f172a;
-  border-color: rgb(251 191 36 / 0.8);
-  background: var(--primary);
+  color: white;
+  border-color: oklch(0.68 0.18 270);
+  background: linear-gradient(180deg, var(--primary-strong), var(--primary));
   font-weight: 760;
 }
 
@@ -2078,19 +1966,19 @@ input[type="range"] {
 }
 
 .export-button:hover {
-  border-color: rgb(245 158 11 / 0.54);
-  background: rgb(245 158 11 / 0.1);
+  border-color: oklch(0.46 0.08 270);
+  background: oklch(0.22 0.05 270);
 }
 
 .output-size-grid .export-button:not(.is-active) {
   color: var(--text);
-  background: #0b1324;
+  background: oklch(0.13 0.012 265);
 }
 
 .output-size-grid .export-button.is-active {
-  color: #0f172a;
-  border-color: rgb(251 191 36 / 0.8);
-  background: var(--primary);
+  color: white;
+  border-color: oklch(0.68 0.18 270);
+  background: linear-gradient(180deg, var(--primary-strong), var(--primary));
   font-weight: 760;
 }
 

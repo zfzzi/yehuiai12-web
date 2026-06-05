@@ -44,7 +44,7 @@ export function LeftPanel({
       <div className="panel-head">
         <div>
           <h2>项目素材</h2>
-          <p>上传主图、图纸，再选择场景参考。</p>
+          <p>上传主图，再选择场景参考。</p>
         </div>
       </div>
 
@@ -154,18 +154,6 @@ export function LeftPanel({
               </span>
             </button>
           ))}
-        </div>
-      </section>
-
-      <section className="project-brief" aria-label="项目状态">
-        <div className="section-title">项目状态</div>
-        <div className="brief-row">
-          <span>当前项目</span>
-          <strong>未命名夜景项目</strong>
-        </div>
-        <div className="brief-row">
-          <span>生成策略</span>
-          <strong>保结构 · 调灯光</strong>
         </div>
       </section>
     </aside>

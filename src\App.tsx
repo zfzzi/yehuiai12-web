@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  defaultParams,
   defaultReferences,
   initialPrompt,
   styleReferences
@@ -18,10 +17,8 @@ import { InspectorPanel } from "./components/InspectorPanel";
 import { LeftPanel } from "./components/LeftPanel";
 import { TopBar } from "./components/TopBar";
 import type {
-  CanvasLock,
   CanvasTool,
   ExportRequest,
-  LightingParams,
   LightingMoodTemplate,
   ReferenceImage,
   SceneType
@@ -46,16 +43,9 @@ function App() {
     "不模糊",
     "不改变人物和树木"
   ]);
-  const [locks, setLocks] = useState<CanvasLock[]>([
-    "建筑结构",
-    "透视关系",
-    "树木",
-    "地面铺装"
-  ]);
   const [activeTool, setActiveTool] = useState<CanvasTool>("标注灯位");
   const [compare, setCompare] = useState(48);
   const [prompt, setPrompt] = useState(initialPrompt);
-  const [lightingParams, setLightingParams] = useState<LightingParams>(defaultParams);
   const [outputSize, setOutputSize] = useState<ExportRequest["type"]>("4K");
   const [resultImageUrl, setResultImageUrl] = useState<string>();
   const [apiStatus, setApiStatus] = useState({
@@ -173,9 +163,7 @@ function App() {
       `场景：${sceneType}`,
       `风格：${selectedTemplate}`,
       `灯具：${activeFixture}`,
-      `色温 ${lightingParams.colorTemperature}K，亮度 ${lightingParams.brightness}%，光晕 ${lightingParams.halo}%，内透 ${lightingParams.interiorGlow}%`,
       prompt.trim(),
-      `保护约束：${locks.join("、")}`,
       `负面约束：${negativePrompts.join("、")}`
     ];
 
@@ -239,13 +227,6 @@ function App() {
     setActiveTool("标注灯位");
   }
 
-  function handleLightingParamChange(key: keyof LightingParams, value: number) {
-    setLightingParams((current) => ({
-      ...current,
-      [key]: value
-    }));
-  }
-
   function handleRechargeCredits(amount: number) {
     if (!currentUser) {
       return;
@@ -303,12 +284,10 @@ function App() {
           activeFixture={activeFixture}
           activeTool={activeTool}
           compare={compare}
-          locks={locks}
           resultImageUrl={resultImageUrl}
           sourceImageUrl={primaryPreviewUrl}
           onCompareChange={setCompare}
           onPrimaryImageUpload={(file) => handleUpload("primary", file)}
-          onLockToggle={(lock) => setLocks((current) => toggleListValue(current, lock))}
           onToolChange={setActiveTool}
         />
         <InspectorPanel
@@ -316,7 +295,6 @@ function App() {
           apiStatus={apiStatus}
           canExport={canExport}
           negativePrompts={negativePrompts}
-          lightingParams={lightingParams}
           outputSize={outputSize}
           prompt={prompt}
           sceneType={sceneType}
@@ -325,7 +303,6 @@ function App() {
           onFixtureChange={handleFixtureChange}
           onExport={handleExport}
           onGenerate={handleGenerate}
-          onLightingParamChange={handleLightingParamChange}
           onNegativeToggle={(item) =>
             setNegativePrompts((current) => toggleListValue(current, item))
           }

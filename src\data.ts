@@ -1,9 +1,7 @@
 import type {
-  CanvasAnnotation,
   CanvasLock,
   LightingMoodTemplate,
   LightingParams,
-  ProjectVersion,
   ReferenceImage,
   SceneType,
   StyleReference
@@ -148,72 +146,6 @@ export const defaultParams: LightingParams = {
   overexposureRepair: 40,
   warmCoolContrast: "中"
 };
-
-export const versions: ProjectVersion[] = [
-  {
-    id: "v1",
-    title: "V1 原始上传",
-    note: "主图与约束已记录",
-    status: "原始"
-  },
-  {
-    id: "v2",
-    title: "V2 当前方案",
-    note: "等待生成结果写入",
-    status: "修改"
-  },
-  {
-    id: "v3",
-    title: "V3 局部修改",
-    note: "用于圈选调整",
-    status: "修改"
-  },
-  {
-    id: "v4",
-    title: "V4 方案分支",
-    note: "保留不同灯光策略",
-    status: "候选"
-  },
-  {
-    id: "v5",
-    title: "V5 汇报候选",
-    note: "用于导出对比图",
-    status: "候选"
-  },
-  {
-    id: "v6",
-    title: "V6 最终版",
-    note: "生成后可锁定交付",
-    status: "汇报"
-  }
-];
-
-export const annotations: CanvasAnnotation[] = [
-  {
-    id: "a1",
-    label: "底部洗墙范围",
-    type: "line",
-    intent: "wash"
-  },
-  {
-    id: "a2",
-    label: "主入口内透",
-    type: "area",
-    intent: "brighten"
-  },
-  {
-    id: "a3",
-    label: "保留窗格结构",
-    type: "area",
-    intent: "preserve"
-  },
-  {
-    id: "a4",
-    label: "投光灯位",
-    type: "point",
-    intent: "fixture"
-  }
-];
 
 export const initialPrompt =
   "生成傍晚 18 点到 19 点的蓝调夜景效果，建筑立面偏冷蓝，底部洗墙灯为暖白色，增加室内内透，但不要改变建筑结构、树木、地砖和透视关系。";

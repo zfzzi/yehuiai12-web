@@ -1,14 +1,14 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   defaultParams,
   defaultReferences,
   initialPrompt,
   styleReferences
 } from "./data";
-import { exportProject, generateNightRender, optimizePrompt } from "./api/nightRenderClient";
 import {
   addUserCredits,
   clearCurrentUser,
+  consumeUserCredits,
   loadCurrentUser,
   type UserProfile
 } from "./auth/userProfile";
@@ -21,14 +21,12 @@ import type {
   CanvasLock,
   CanvasTool,
   ExportRequest,
-  GenerationRequest,
+  LightingParams,
   LightingMoodTemplate,
   ReferenceImage,
   SceneType
 } from "./types/nightRender";
 import "./styles.css";
-
-const projectId = "yeyuai-active-project";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => loadCurrentUser());
@@ -57,49 +55,13 @@ function App() {
   const [activeTool, setActiveTool] = useState<CanvasTool>("标注灯位");
   const [compare, setCompare] = useState(48);
   const [prompt, setPrompt] = useState(initialPrompt);
-  const selectedVersion = "v6";
+  const [lightingParams, setLightingParams] = useState<LightingParams>(defaultParams);
+  const [outputSize, setOutputSize] = useState<ExportRequest["type"]>("4K");
   const [resultImageUrl, setResultImageUrl] = useState<string>();
   const [apiStatus, setApiStatus] = useState({
     state: "idle" as "idle" | "loading" | "error" | "success",
-    message: "准备就绪。上传素材后可开始生成夜景方案。"
+    message: "上传主图后可开始生成夜景测试预览。"
   });
-
-  const requestPayload = useMemo<GenerationRequest>(
-    () => ({
-      projectId,
-      references: references.map(({ role, fileName, status }) => ({
-        role,
-        fileName,
-        status
-      })),
-      sceneType,
-      template: selectedTemplate,
-      params: defaultParams,
-      prompt,
-      negativePrompts,
-      locks,
-      annotations: [],
-      styleReference: {
-        id: selectedStyleReference.id,
-        title: selectedStyleReference.title,
-        template: selectedStyleReference.template
-      },
-      output: {
-        size: "4K",
-        ratio: "自动适配",
-        format: "PNG"
-      }
-    }),
-    [
-      locks,
-      negativePrompts,
-      prompt,
-      references,
-      sceneType,
-      selectedStyleReference,
-      selectedTemplate
-    ]
-  );
 
   function handleUpload(id: string, file: File) {
     const previewUrl = file.type.startsWith("image/")
@@ -175,81 +137,93 @@ function App() {
       return;
     }
 
+    if (!currentUser) {
+      return;
+    }
+
+    if (currentUser.credits < 6) {
+      setApiStatus({
+        state: "error",
+        message: "积分不足，充值后可继续生成。"
+      });
+      return;
+    }
+
     setApiStatus({
       state: "loading",
-      message: "正在提交生成任务..."
+      message: "正在生成夜景测试预览..."
     });
 
-    try {
-      const response = await generateNightRender(requestPayload);
-      if (response.resultImageUrl) {
-        setResultImageUrl(response.resultImageUrl);
+    window.setTimeout(() => {
+      const updatedUser = consumeUserCredits(currentUser.id, 6);
+      if (updatedUser) {
+        setCurrentUser(updatedUser);
       }
+
+      setResultImageUrl(primaryPreviewUrl);
       setApiStatus({
         state: "success",
-        message:
-          response.status === "completed" && response.resultImageUrl
-            ? `生成完成，版本 ${response.versionId ?? "待定"}。`
-            : `生成任务已提交，状态 ${response.status}。`
+        message: "本地测试预览已生成，已扣除 6 积分。"
       });
-    } catch (error) {
-      setApiStatus({
-        state: "error",
-        message:
-          error instanceof Error
-            ? "生成服务暂未连接，请配置后端接口后继续。"
-            : "生成服务暂未连接，请稍后重试。"
-      });
-    }
+    }, 620);
   }
 
-  async function handleOptimizePrompt() {
+  function handleOptimizePrompt() {
+    const promptParts = [
+      `场景：${sceneType}`,
+      `风格：${selectedTemplate}`,
+      `灯具：${activeFixture}`,
+      `色温 ${lightingParams.colorTemperature}K，亮度 ${lightingParams.brightness}%，光晕 ${lightingParams.halo}%，内透 ${lightingParams.interiorGlow}%`,
+      prompt.trim(),
+      `保护约束：${locks.join("、")}`,
+      `负面约束：${negativePrompts.join("、")}`
+    ];
+
+    setPrompt(promptParts.filter(Boolean).join("；"));
+    setApiStatus({
+      state: "success",
+      message: "指令已整理，可直接生成测试预览。"
+    });
+  }
+
+  async function handleExport() {
+    const imageUrl = resultImageUrl ?? primaryPreviewUrl;
+
+    if (!imageUrl) {
+      setApiStatus({
+        state: "error",
+        message: "请先上传主图并生成预览后再导出。"
+      });
+      return;
+    }
+
     setApiStatus({
       state: "loading",
-      message: "正在优化专业提示词..."
+      message: `正在导出 ${outputSize} 预览图...`
     });
 
     try {
-      const response = await optimizePrompt(prompt);
-      setPrompt(response.optimizedPrompt);
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `夜绘AI-${outputSize}-夜景预览.png`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
       setApiStatus({
         state: "success",
-        message: "提示词已由后端优化。"
+        message: `${outputSize} 预览图已开始下载。`
       });
     } catch (error) {
       setApiStatus({
         state: "error",
         message:
           error instanceof Error
-            ? "提示词优化服务暂未连接，请配置后端接口后继续。"
-            : "提示词优化服务暂未连接。"
-      });
-    }
-  }
-
-  async function handleExport(type: ExportRequest["type"]) {
-    setApiStatus({
-      state: "loading",
-      message: `正在创建 ${type} 导出任务...`
-    });
-
-    try {
-      const response = await exportProject({
-        projectId,
-        versionId: selectedVersion,
-        type
-      });
-      setApiStatus({
-        state: "success",
-        message: `导出任务已创建：${response.jobId}。`
-      });
-    } catch (error) {
-      setApiStatus({
-        state: "error",
-        message:
-          error instanceof Error
-            ? "导出服务暂未连接，请配置后端接口后继续。"
-            : "导出服务暂未连接。"
+            ? "导出失败，请确认图片仍可访问后重试。"
+            : "导出失败。"
       });
     }
   }
@@ -263,6 +237,13 @@ function App() {
   function handleFixtureChange(fixture: string) {
     setActiveFixture(fixture);
     setActiveTool("标注灯位");
+  }
+
+  function handleLightingParamChange(key: keyof LightingParams, value: number) {
+    setLightingParams((current) => ({
+      ...current,
+      [key]: value
+    }));
   }
 
   function handleRechargeCredits(amount: number) {
@@ -285,6 +266,12 @@ function App() {
     (reference) => reference.role === "primary"
   )?.previewUrl;
   const canGenerate = Boolean(primaryPreviewUrl);
+  const canExport = Boolean(resultImageUrl);
+  const projectStatus = primaryPreviewUrl
+    ? resultImageUrl
+      ? "预览已生成"
+      : "素材已就绪"
+    : "等待主图";
 
   if (!currentUser) {
     return <AuthScreen onAuthenticated={setCurrentUser} />;
@@ -293,10 +280,17 @@ function App() {
   return (
     <div className="app-shell">
       <TopBar
+        hasPrimaryImage={Boolean(primaryPreviewUrl)}
+        projectStatus={projectStatus}
         userProfile={currentUser}
         onLogout={handleLogout}
         onRechargeCredits={handleRechargeCredits}
       />
+      {apiStatus.state !== "idle" ? (
+        <div className={`global-toast state-${apiStatus.state}`} role="status">
+          <span>{apiStatus.message}</span>
+        </div>
+      ) : null}
       <div className="workspace">
         <LeftPanel
           references={references}
@@ -320,7 +314,10 @@ function App() {
         <InspectorPanel
           activeFixture={activeFixture}
           apiStatus={apiStatus}
+          canExport={canExport}
           negativePrompts={negativePrompts}
+          lightingParams={lightingParams}
+          outputSize={outputSize}
           prompt={prompt}
           sceneType={sceneType}
           selectedTemplate={selectedTemplate}
@@ -328,10 +325,12 @@ function App() {
           onFixtureChange={handleFixtureChange}
           onExport={handleExport}
           onGenerate={handleGenerate}
+          onLightingParamChange={handleLightingParamChange}
           onNegativeToggle={(item) =>
             setNegativePrompts((current) => toggleListValue(current, item))
           }
           onOptimizePrompt={handleOptimizePrompt}
+          onOutputSizeChange={setOutputSize}
           onPromptChange={setPrompt}
           onSceneChange={setSceneType}
         />

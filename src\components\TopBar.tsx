@@ -1,16 +1,13 @@
 import {
   BadgeCheck,
   ChevronDown,
+  CircleDot,
   Coins,
   CreditCard,
-  Download,
   FolderOpen,
-  History,
-  Library,
   LogOut,
   Mail,
   Phone,
-  Save,
   Sparkles,
   User
 } from "lucide-react";
@@ -18,6 +15,8 @@ import { useEffect, useRef, useState } from "react";
 import type { UserProfile } from "../auth/userProfile";
 
 interface TopBarProps {
+  hasPrimaryImage: boolean;
+  projectStatus: string;
   userProfile: UserProfile;
   onLogout: () => void;
   onRechargeCredits: (amount: number) => void;
@@ -38,7 +37,13 @@ function formatDateTime(dateTime: string) {
   }
 }
 
-export function TopBar({ userProfile, onLogout, onRechargeCredits }: TopBarProps) {
+export function TopBar({
+  hasPrimaryImage,
+  projectStatus,
+  userProfile,
+  onLogout,
+  onRechargeCredits
+}: TopBarProps) {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isProfileDetailsOpen, setIsProfileDetailsOpen] = useState(false);
   const [lastRechargeAmount, setLastRechargeAmount] = useState<number | null>(null);
@@ -103,21 +108,10 @@ export function TopBar({ userProfile, onLogout, onRechargeCredits }: TopBarProps
       </div>
 
       <div className="top-actions">
-        <button className="ghost-button" type="button">
-          <Save size={15} aria-hidden="true" />
-          <span>保存项目</span>
-        </button>
-        <button className="ghost-button" type="button">
-          <History size={15} aria-hidden="true" />
-          <span>生成历史</span>
-        </button>
-        <button className="ghost-button" type="button">
-          <Download size={15} aria-hidden="true" />
-          <span>导出</span>
-        </button>
-        <button className="icon-button" aria-label="素材库" type="button">
-          <Library size={18} />
-        </button>
+        <div className={hasPrimaryImage ? "project-status is-ready" : "project-status"}>
+          <CircleDot size={14} aria-hidden="true" />
+          <span>{projectStatus}</span>
+        </div>
         <div className="account-menu-wrap" ref={accountMenuRef}>
           <button
             aria-expanded={isAccountOpen}

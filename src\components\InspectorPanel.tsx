@@ -6,23 +6,76 @@ import {
   Lightbulb,
   Loader2,
   Send,
+  SlidersHorizontal,
   SquareStack,
   Wand2
 } from "lucide-react";
 import { fixtureGroups, negativePromptOptions, sceneTypes } from "../data";
 import type {
   ExportRequest,
+  LightingParams,
   LightingMoodTemplate,
   SceneType
 } from "../types/nightRender";
 
-const exportOptions: ExportRequest["type"][] = [
+const outputSizes: ExportRequest["type"][] = [
   "2K",
   "4K",
   "6K",
-  "8K",
-  "汇报版式",
-  "对比图"
+  "8K"
+];
+
+const lightingControls: Array<{
+  key: keyof Pick<
+    LightingParams,
+    "colorTemperature" | "brightness" | "halo" | "interiorGlow" | "glareControl"
+  >;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+}> = [
+  {
+    key: "colorTemperature",
+    label: "色温",
+    min: 2200,
+    max: 6500,
+    step: 100,
+    unit: "K"
+  },
+  {
+    key: "brightness",
+    label: "亮度",
+    min: 0,
+    max: 100,
+    step: 1,
+    unit: "%"
+  },
+  {
+    key: "halo",
+    label: "光晕",
+    min: 0,
+    max: 100,
+    step: 1,
+    unit: "%"
+  },
+  {
+    key: "interiorGlow",
+    label: "内透",
+    min: 0,
+    max: 100,
+    step: 1,
+    unit: "%"
+  },
+  {
+    key: "glareControl",
+    label: "眩光控制",
+    min: 0,
+    max: 100,
+    step: 1,
+    unit: "%"
+  }
 ];
 
 interface ApiStatus {
@@ -33,16 +86,21 @@ interface ApiStatus {
 interface InspectorPanelProps {
   apiStatus: ApiStatus;
   activeFixture: string;
+  canExport: boolean;
   canGenerate: boolean;
+  lightingParams: LightingParams;
   negativePrompts: string[];
+  outputSize: ExportRequest["type"];
   prompt: string;
   sceneType: SceneType;
   selectedTemplate: LightingMoodTemplate;
-  onExport: (type: ExportRequest["type"]) => void;
+  onExport: () => void;
   onFixtureChange: (fixture: string) => void;
   onGenerate: () => void;
+  onLightingParamChange: (key: keyof LightingParams, value: number) => void;
   onNegativeToggle: (prompt: string) => void;
   onOptimizePrompt: () => void;
+  onOutputSizeChange: (size: ExportRequest["type"]) => void;
   onPromptChange: (prompt: string) => void;
   onSceneChange: (scene: SceneType) => void;
 }
@@ -50,16 +108,21 @@ interface InspectorPanelProps {
 export function InspectorPanel({
   apiStatus,
   activeFixture,
+  canExport,
   canGenerate,
+  lightingParams,
   negativePrompts,
+  outputSize,
   prompt,
   sceneType,
   selectedTemplate,
   onExport,
   onFixtureChange,
   onGenerate,
+  onLightingParamChange,
   onNegativeToggle,
   onOptimizePrompt,
+  onOutputSizeChange,
   onPromptChange,
   onSceneChange
 }: InspectorPanelProps) {
@@ -118,6 +181,37 @@ export function InspectorPanel({
         ))}
       </section>
 
+      <section className="control-section lighting-section">
+        <div className="section-title with-icon">
+          <SlidersHorizontal size={14} aria-hidden="true" />
+          灯光参数
+        </div>
+        <div className="lighting-control-list">
+          {lightingControls.map((control) => (
+            <label className="range-field" key={control.key}>
+              <span>
+                <strong>{control.label}</strong>
+                <em>
+                  {lightingParams[control.key]}
+                  {control.unit}
+                </em>
+              </span>
+              <input
+                aria-label={control.label}
+                max={control.max}
+                min={control.min}
+                step={control.step}
+                type="range"
+                value={lightingParams[control.key]}
+                onChange={(event) =>
+                  onLightingParamChange(control.key, Number(event.currentTarget.value))
+                }
+              />
+            </label>
+          ))}
+        </div>
+      </section>
+
       <section className="control-section prompt-section">
         <div className="section-title">自然语言指令</div>
         <textarea
@@ -129,7 +223,7 @@ export function InspectorPanel({
         <div className="prompt-actions">
           <button className="ghost-button wide" onClick={onOptimizePrompt} type="button">
             <Wand2 size={15} aria-hidden="true" />
-            优化提示词
+            整理指令
           </button>
           <button
             className="primary-button"
@@ -147,25 +241,31 @@ export function InspectorPanel({
       <section className="control-section output-section">
         <div className="section-title with-icon">
           <Download size={14} aria-hidden="true" />
-          输出
+          输出设置
         </div>
-        <div className="inspector-export-grid">
-          {exportOptions.map((type) => (
+        <div className="output-size-grid" role="group" aria-label="选择输出尺寸">
+          {outputSizes.map((type) => (
             <button
-              className="export-button"
+              className={type === outputSize ? "export-button is-active" : "export-button"}
               key={type}
               type="button"
-              onClick={() => onExport(type)}
+              onClick={() => onOutputSizeChange(type)}
             >
-              {type === "汇报版式" ? (
-                <FileStack size={14} aria-hidden="true" />
-              ) : (
-                <SquareStack size={14} aria-hidden="true" />
-              )}
+              <SquareStack size={14} aria-hidden="true" />
               {type}
             </button>
           ))}
         </div>
+        <button
+          className="primary-button export-primary"
+          disabled={!canExport || isLoading}
+          type="button"
+          onClick={onExport}
+          title={canExport ? "导出当前预览图" : "生成预览后可导出"}
+        >
+          <FileStack size={15} aria-hidden="true" />
+          导出当前图
+        </button>
       </section>
 
       <section className="control-section negative-section">

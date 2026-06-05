@@ -3,14 +3,12 @@ import {
   BadgeCheck,
   Blend,
   Crosshair,
-  Focus,
   Eraser,
   ImagePlus,
   Lightbulb,
   LockKeyhole,
   Maximize2,
   PenLine,
-  SlidersHorizontal,
   SunMoon,
   Trash2,
   ZoomIn,
@@ -1081,8 +1079,8 @@ export function CanvasStage({
     <main className="canvas-shell">
       <div className="canvas-head">
         <div>
-          <h1>AI 照明效果图工作台</h1>
-          <p>保留原结构与透视，只把灯光、天空、内透和氛围交给 AI。</p>
+          <h1>编辑器</h1>
+          <p>上传主图后标注灯位、锁定结构，并生成夜景测试预览。</p>
         </div>
       </div>
 
@@ -1184,15 +1182,23 @@ export function CanvasStage({
         >
           {hasSource ? (
             <>
-              <div className="canvas-viewport-content" style={canvasViewportStyle}>
+              <div
+                className={
+                  hasResult
+                    ? "canvas-viewport-content has-result-preview"
+                    : "canvas-viewport-content"
+                }
+                style={canvasViewportStyle}
+              >
                 <img className="render-image source-image" src={sourceImageUrl} alt="用户上传的主图" />
                 {hasResult ? (
                   <>
                     <img
                       className="render-image generated"
                       src={resultImageUrl}
-                      alt="生成后的夜景效果图"
+                      alt="生成后的夜景测试预览"
                     />
+                    <div className="night-preview-overlay" aria-hidden="true" />
                     <img
                       className="render-image before-layer"
                       src={sourceImageUrl}
@@ -1322,18 +1328,6 @@ export function CanvasStage({
             锁定{lock}
           </button>
         ))}
-        <button className="lock-chip accent" type="button">
-          <SlidersHorizontal size={13} aria-hidden="true" />
-          只修改灯光
-        </button>
-        <button className="lock-chip accent" type="button">
-          <Focus size={13} aria-hidden="true" />
-          只增强氛围
-        </button>
-        <button className="lock-chip accent" type="button">
-          <Lightbulb size={13} aria-hidden="true" />
-          只修改灯具
-        </button>
       </div>
     </main>
   );

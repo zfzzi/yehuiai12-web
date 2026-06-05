@@ -238,6 +238,21 @@ export function addUserCredits(userId: string, amount: number): UserProfile | nu
   return upsertUser(updatedUser);
 }
 
+export function consumeUserCredits(userId: string, amount: number): UserProfile | null {
+  const users = readUsers();
+  const user = users.find((item) => item.id === userId);
+
+  if (!user || user.credits < amount) {
+    return null;
+  }
+
+  return upsertUser({
+    ...user,
+    credits: user.credits - amount,
+    lastLoginAt: new Date().toISOString()
+  });
+}
+
 export function clearCurrentUser() {
   if (!isBrowser()) {
     return;

@@ -4,7 +4,6 @@ import {
   Layers2,
   Map,
   Palette,
-  Plus,
   Trash2
 } from "lucide-react";
 import { useState } from "react";
@@ -44,12 +43,9 @@ export function LeftPanel({
     <aside className="panel left-panel" aria-label="项目与素材">
       <div className="panel-head">
         <div>
-          <h2>输入素材</h2>
+          <h2>项目素材</h2>
           <p>上传主图、图纸，再选择场景参考。</p>
         </div>
-        <button className="icon-button compact" aria-label="新建项目" type="button">
-          <Plus size={16} />
-        </button>
       </div>
 
       <div className="upload-list">

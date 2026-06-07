@@ -7,20 +7,13 @@ import {
   LockKeyhole,
   Mail,
   MessageCircle,
-  Moon,
   Phone,
   ShieldCheck,
+  Sparkles,
   User,
   Wand2
 } from "lucide-react";
 import { Button } from "./ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import {
@@ -29,6 +22,7 @@ import {
   type UserProfile
 } from "../auth/userProfile";
 import { cn } from "../lib/utils";
+import { InteractiveNebulaShader } from "./ui/liquid-shader";
 
 type AuthMode = "login" | "register";
 type FieldName =
@@ -204,13 +198,13 @@ function AuthField({
   const showSuccess = showFeedback && isFilled && !error;
 
   return (
-    <div className="flex flex-col gap-1.5" data-invalid={showError ? true : undefined}>
-      <div className="relative">
+    <div className="auth-field" data-invalid={showError ? true : undefined}>
+      <div className="auth-field-control">
         <Icon
           className={cn(
-            "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors",
-            showError && "text-destructive",
-            showSuccess && "text-accent-foreground"
+            "auth-field-icon",
+            showError && "is-error",
+            showSuccess && "is-success"
           )}
           aria-hidden="true"
         />
@@ -221,7 +215,7 @@ function AuthField({
           type={isPassword && isVisible ? "text" : config.type ?? "text"}
           inputMode={config.inputMode}
           autoComplete={config.autoComplete}
-          className="peer pl-10 pr-10"
+          className="auth-input peer"
           placeholder=" "
           value={field.value}
           onBlur={onBlur}
@@ -229,9 +223,9 @@ function AuthField({
         />
         <label
           className={cn(
-            "pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 text-sm text-muted-foreground transition-all peer-focus:top-3 peer-focus:text-[0.68rem] peer-focus:text-accent-foreground",
-            isFilled && "top-3 text-[0.68rem]",
-            showError && "text-destructive peer-focus:text-destructive"
+            "auth-floating-label",
+            isFilled && "is-filled",
+            showError && "is-error"
           )}
           htmlFor={config.name}
         >
@@ -240,7 +234,7 @@ function AuthField({
         {isPassword ? (
           <button
             aria-label={isVisible ? "隐藏密码" : "显示密码"}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="auth-password-toggle"
             type="button"
             onClick={() => setIsVisible((current) => !current)}
           >
@@ -248,20 +242,10 @@ function AuthField({
           </button>
         ) : null}
         {!isPassword && showSuccess ? (
-          <CheckCircle2
-            className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-accent-foreground"
-            aria-hidden="true"
-          />
+          <CheckCircle2 className="auth-field-check" aria-hidden="true" />
         ) : null}
       </div>
-      <p
-        className={cn(
-          "min-h-4 text-xs text-muted-foreground transition-colors",
-          showError && "text-destructive",
-          showSuccess && "text-accent-foreground"
-        )}
-        aria-live="polite"
-      >
+      <p className={cn("auth-field-message", showError && "is-error")} aria-live="polite">
         {showError ? error : showSuccess ? "格式正确" : " "}
       </p>
     </div>
@@ -290,12 +274,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     }
 
     if (mode === "register") {
-      nextErrors.agreement = validateField(
-        "agreement",
-        "",
-        fields,
-        agreementAccepted
-      );
+      nextErrors.agreement = validateField("agreement", "", fields, agreementAccepted);
     }
 
     return nextErrors;
@@ -352,7 +331,8 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     setAttemptedSubmit(true);
     markActiveFieldsTouched();
 
-    const hasError = activeFields.some((config) => Boolean(errors[config.name])) ||
+    const hasError =
+      activeFields.some((config) => Boolean(errors[config.name])) ||
       (mode === "register" && Boolean(errors.agreement));
 
     if (hasError) {
@@ -372,14 +352,14 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
 
       setIsSubmitting(false);
       onAuthenticated(profile);
-    }, 380);
+    }, 360);
   }
 
   function handleThirdPartyLogin(provider: "微信" | "GitHub") {
     setIsSubmitting(true);
     window.setTimeout(() => {
       const profile = resolveLoginUser(
-        provider === "微信" ? "wechat@yehuiai.local" : "github@yehuiai.local"
+        provider === "微信" ? "wechat@zerlum.local" : "github@zerlum.local"
       );
 
       setIsSubmitting(false);
@@ -388,48 +368,44 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   }
 
   return (
-    <main className="auth-screen relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-6 py-10 text-foreground">
-      <div className="auth-drift-layer absolute inset-0" aria-hidden="true" />
-      <div className="auth-skyline absolute inset-x-0 bottom-0 h-48" aria-hidden="true" />
-      <div className="absolute left-10 top-10 hidden items-center gap-3 md:flex">
-        <span className="grid size-10 place-items-center rounded-lg bg-primary text-primary-foreground shadow-auth-glow">
-          <Moon className="size-5" aria-hidden="true" />
-        </span>
-        <span className="flex flex-col">
-          <strong className="text-base font-semibold leading-tight">夜绘AI</strong>
-          <span className="text-xs text-muted-foreground">AI 夜景照明效果图工作台</span>
-        </span>
-      </div>
+    <main className="auth-page">
+      <InteractiveNebulaShader className="auth-shader" />
 
-      <Card className="relative z-10 w-full max-w-[430px] overflow-hidden rounded-2xl border-border/80 bg-card/90 p-7 backdrop-blur-xl md:p-8">
-        <CardHeader className="items-center pb-2 text-center">
-          <span className="grid size-12 place-items-center rounded-xl border border-border bg-secondary text-accent-foreground shadow-auth-glow md:hidden">
-            <Moon className="size-6" aria-hidden="true" />
+      <section className="auth-hero" aria-label="Zerlum login introduction">
+        <div className="auth-logo-row">
+          <span className="auth-logo" aria-hidden="true">
+            <Sparkles size={18} />
           </span>
-          <CardTitle>夜绘AI</CardTitle>
-          <CardDescription>
-            {mode === "login"
-              ? "登录后进入夜景照明效果图工作台"
-              : "创建账号，开始管理夜景生成项目"}
-          </CardDescription>
-        </CardHeader>
+          <strong>Zerlum</strong>
+        </div>
+        <h1>
+          <span>Enter The</span>
+          <span>Light Lab</span>
+        </h1>
+        <p>管理夜景项目、上传建筑图像、标注灯位并生成高质感照明效果图。</p>
+      </section>
 
-        <div className="my-5 grid grid-cols-2 rounded-lg border border-border bg-background/60 p-1">
+      <section className="auth-panel" aria-labelledby="auth-title">
+        <div className="auth-panel-head">
+          <span className="auth-panel-mark" aria-hidden="true">
+            <Sparkles size={18} />
+          </span>
+          <div>
+            <h2 id="auth-title">Zerlum</h2>
+            <p>{mode === "login" ? "登录后进入 AI 夜景照明工作台" : "创建账号并开始夜景方案管理"}</p>
+          </div>
+        </div>
+
+        <div className="auth-mode-switch" role="tablist" aria-label="登录方式">
           <button
-            className={cn(
-              "h-9 rounded-md text-sm text-muted-foreground transition-all",
-              mode === "login" && "bg-secondary text-foreground shadow-sm"
-            )}
+            className={mode === "login" ? "is-active" : undefined}
             type="button"
             onClick={() => handleModeChange("login")}
           >
             登录
           </button>
           <button
-            className={cn(
-              "h-9 rounded-md text-sm text-muted-foreground transition-all",
-              mode === "register" && "bg-secondary text-foreground shadow-sm"
-            )}
+            className={mode === "register" ? "is-active" : undefined}
             type="button"
             onClick={() => handleModeChange("register")}
           >
@@ -437,118 +413,106 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           </button>
         </div>
 
-        <CardContent className="px-0">
-          <form className="flex flex-col gap-3" key={mode} onSubmit={handleSubmit}>
-            <div className="animate-auth-fade">
-              {activeFields.map((config) => (
-                <AuthField
-                  config={config}
-                  error={errors[config.name] ?? ""}
-                  field={fields[config.name]}
-                  key={config.name}
-                  showFeedback={attemptedSubmit || fields[config.name].touched}
-                  onBlur={() => touchField(config.name)}
-                  onChange={(value) => updateField(config.name, value)}
+        <form className="auth-form" key={mode} onSubmit={handleSubmit}>
+          {activeFields.map((config) => (
+            <AuthField
+              config={config}
+              error={errors[config.name] ?? ""}
+              field={fields[config.name]}
+              key={config.name}
+              showFeedback={attemptedSubmit || fields[config.name].touched}
+              onBlur={() => touchField(config.name)}
+              onChange={(value) => updateField(config.name, value)}
+            />
+          ))}
+
+          {mode === "login" ? (
+            <div className="auth-row">
+              <label className="auth-checkline">
+                <Checkbox
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
                 />
-              ))}
-
-              {mode === "login" ? (
-                <div className="mt-1 flex items-center justify-between gap-4 text-sm">
-                  <label className="flex items-center gap-2 text-muted-foreground">
-                    <Checkbox
-                      checked={rememberMe}
-                      onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
-                    />
-                    记住我
-                  </label>
-                  <Button asChild variant="link" size="sm">
-                    <a href="#forgot-password">忘记密码</a>
-                  </Button>
-                </div>
-              ) : (
-                <div className="mt-1 flex flex-col gap-1.5">
-                  <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <Checkbox
-                      checked={agreementAccepted}
-                      aria-invalid={attemptedSubmit && Boolean(errors.agreement)}
-                      onCheckedChange={(checked) => {
-                        setAgreementAccepted(Boolean(checked));
-                        touchField("agreement");
-                      }}
-                    />
-                    <span>
-                      我已阅读并同意
-                      <a className="mx-1 text-accent-foreground hover:underline" href="#terms">
-                        用户协议
-                      </a>
-                      和
-                      <a className="ml-1 text-accent-foreground hover:underline" href="#privacy">
-                        隐私政策
-                      </a>
-                    </span>
-                  </label>
-                  <p className="min-h-4 text-xs text-destructive" aria-live="polite">
-                    {attemptedSubmit && errors.agreement ? errors.agreement : " "}
-                  </p>
-                </div>
-              )}
+                记住我
+              </label>
+              <Button asChild variant="link" size="sm">
+                <a href="#forgot-password">忘记密码</a>
+              </Button>
             </div>
+          ) : (
+            <div className="auth-agreement">
+              <label className="auth-checkline">
+                <Checkbox
+                  checked={agreementAccepted}
+                  aria-invalid={attemptedSubmit && Boolean(errors.agreement)}
+                  onCheckedChange={(checked) => {
+                    setAgreementAccepted(Boolean(checked));
+                    touchField("agreement");
+                  }}
+                />
+                <span>
+                  我已阅读并同意
+                  <a href="#terms">用户协议</a>
+                  和
+                  <a href="#privacy">隐私政策</a>
+                </span>
+              </label>
+              <p className="auth-field-message is-error">
+                {attemptedSubmit && errors.agreement ? errors.agreement : " "}
+              </p>
+            </div>
+          )}
 
-            <Button
-              className="mt-1 h-12 bg-gradient-to-r from-primary via-[oklch(0.62_0.19_252)] to-[oklch(0.72_0.16_212)] text-base shadow-auth-glow hover:scale-[1.018]"
-              disabled={isSubmitting}
-              type="submit"
-            >
-              {isSubmitting ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Wand2 className="size-4" aria-hidden="true" />
-              )}
-              {mode === "login" ? "登录工作台" : "注册并进入工作台"}
-            </Button>
-          </form>
+          <Button className="auth-primary" disabled={isSubmitting} type="submit">
+            {isSubmitting ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Wand2 className="size-4" aria-hidden="true" />
+            )}
+            {mode === "login" ? "登录工作台" : "注册并进入"}
+          </Button>
+        </form>
 
-          <div className="flex items-center gap-3">
-            <span className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">第三方登录</span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
+        <div className="auth-divider">
+          <span />
+          <small>第三方登录</small>
+          <span />
+        </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              className="h-11"
-              disabled={isSubmitting}
-              variant="secondary"
-              type="button"
-              onClick={() => handleThirdPartyLogin("微信")}
-            >
-              <MessageCircle className="size-4" aria-hidden="true" />
-              微信
-            </Button>
-            <Button
-              className="h-11"
-              disabled={isSubmitting}
-              variant="secondary"
-              type="button"
-              onClick={() => handleThirdPartyLogin("GitHub")}
-            >
-              <Github className="size-4" aria-hidden="true" />
-              GitHub
-            </Button>
-          </div>
+        <div className="auth-social-grid">
+          <Button
+            className="auth-social"
+            disabled={isSubmitting}
+            variant="secondary"
+            type="button"
+            onClick={() => handleThirdPartyLogin("微信")}
+          >
+            <MessageCircle size={16} aria-hidden="true" />
+            微信
+          </Button>
+          <Button
+            className="auth-social"
+            disabled={isSubmitting}
+            variant="secondary"
+            type="button"
+            onClick={() => handleThirdPartyLogin("GitHub")}
+          >
+            <Github size={16} aria-hidden="true" />
+            GitHub
+          </Button>
+        </div>
 
-          <p className="text-center text-xs text-muted-foreground">
-            {mode === "login" ? "还没有账号？" : "已有账号？"}
-            <button
-              className="ml-1 text-accent-foreground transition-colors hover:text-foreground"
-              type="button"
-              onClick={() => handleModeChange(mode === "login" ? "register" : "login")}
-            >
-              {mode === "login" ? "立即注册" : "返回登录"}
-            </button>
-          </p>
-        </CardContent>
-      </Card>
+        <p className="auth-footnote">
+          <AlertCircle size={13} aria-hidden="true" />
+          {mode === "login" ? "还没有账号？" : "已有账号？"}
+          <button
+            type="button"
+            onClick={() => handleModeChange(mode === "login" ? "register" : "login")}
+          >
+            {mode === "login" ? "立即注册" : "返回登录"}
+          </button>
+        </p>
+      </section>
     </main>
   );
 }

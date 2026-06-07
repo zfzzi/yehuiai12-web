@@ -27,8 +27,8 @@ export interface RegisterUserInput {
   phone: string;
 }
 
-const USERS_STORAGE_KEY = "yehuiai.registeredUsers";
-const CURRENT_USER_STORAGE_KEY = "yehuiai.currentUserId";
+const USERS_STORAGE_KEY = "zerlum.registeredUsers";
+const CURRENT_USER_STORAGE_KEY = "zerlum.currentUserId";
 const DEFAULT_TRIAL_CREDITS = 120;
 
 function isBrowser() {

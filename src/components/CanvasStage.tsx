@@ -1,10 +1,4 @@
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent,
-  useEffect,
-  useRef,
-  useState
-} from "react";
+import { type PointerEvent, useEffect, useRef, useState } from "react";
 import {
   Blend,
   Crosshair,
@@ -19,12 +13,7 @@ import {
   ZoomIn,
   ZoomOut
 } from "lucide-react";
-import type {
-  CanvasAnnotationSnapshot,
-  CanvasGenerationContext,
-  CanvasTool,
-  NightRenderTimeRange
-} from "../types/nightRender";
+import type { CanvasTool } from "../types/nightRender";
 
 interface CanvasStageProps {
   activeFixture: string;
@@ -32,7 +21,6 @@ interface CanvasStageProps {
   compare: number;
   resultImageUrl?: string;
   sourceImageUrl?: string;
-  onCanvasStateChange: (context: CanvasGenerationContext) => void;
   onCompareChange: (value: number) => void;
   onPrimaryImageUpload: (file: File) => void;
   onToolChange: (tool: CanvasTool) => void;
@@ -45,7 +33,7 @@ const toolIcons: Array<{ tool: CanvasTool; icon: typeof PenLine }> = [
   { tool: "禁止修改", icon: LockKeyhole }
 ];
 
-const timeOptions: NightRenderTimeRange[] = [
+const timeOptions = [
   "日落余晖 17:00-18:00",
   "蓝调时刻 18:00-19:00",
   "入夜商业 19:00-21:00",
@@ -62,6 +50,57 @@ type AreaTool = Extract<CanvasTool, "局部重绘" | "遮罩选择" | "禁止修
 type AreaKind = "repaint" | "mask" | "avoid";
 type FixtureLineKind = "wash" | "linear";
 type FixtureMarkMode = "line" | "direction" | "point" | "area";
+
+type CanvasAnnotationItem =
+  | {
+      id: string;
+      type: "area";
+      kind: AreaKind;
+      label: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }
+  | {
+      id: string;
+      type: "fixtureLine";
+      kind: FixtureLineKind;
+      fixture: string;
+      label: string;
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+    }
+  | {
+      id: string;
+      type: "fixtureDirection";
+      fixture: string;
+      label: string;
+      x: number;
+      y: number;
+      targetX: number;
+      targetY: number;
+    }
+  | {
+      id: string;
+      type: "fixturePoint";
+      fixture: string;
+      label: string;
+      x: number;
+      y: number;
+    }
+  | {
+      id: string;
+      type: "fixtureArea";
+      fixture: string;
+      label: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
 
 interface DraftArea {
   kind: AreaKind;
@@ -196,10 +235,10 @@ function normalizeFixtureArea(draft: DraftFixture) {
 }
 
 function moveAnnotation(
-  annotation: CanvasAnnotationSnapshot,
+  annotation: CanvasAnnotationItem,
   deltaX: number,
   deltaY: number
-): CanvasAnnotationSnapshot {
+): CanvasAnnotationItem {
   if (annotation.type === "area") {
     return {
       ...annotation,
@@ -249,7 +288,6 @@ export function CanvasStage({
   compare,
   resultImageUrl,
   sourceImageUrl,
-  onCanvasStateChange,
   onCompareChange,
   onPrimaryImageUpload,
   onToolChange
@@ -259,10 +297,9 @@ export function CanvasStage({
   const emptyUploadInputRef = useRef<HTMLInputElement | null>(null);
   const imageFrameRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const [annotationItems, setAnnotationItems] = useState<CanvasAnnotationSnapshot[]>([]);
+  const [annotationItems, setAnnotationItems] = useState<CanvasAnnotationItem[]>([]);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string>();
-  const [selectedTime, setSelectedTime] =
-    useState<NightRenderTimeRange>(timeOptions[1]);
+  const [selectedTime, setSelectedTime] = useState(timeOptions[1]);
   const [dragState, setDragState] = useState<{
     id: string;
     lastX: number;
@@ -279,16 +316,6 @@ export function CanvasStage({
   });
   const [draftArea, setDraftArea] = useState<DraftArea | null>(null);
   const [draftFixture, setDraftFixture] = useState<DraftFixture | null>(null);
-  const [isCompareDragging, setIsCompareDragging] = useState(false);
-
-  useEffect(() => {
-    onCanvasStateChange({
-      timeRange: selectedTime,
-      activeTool,
-      annotations: annotationItems,
-      viewBox
-    });
-  }, [activeTool, annotationItems, onCanvasStateChange, selectedTime]);
 
   useEffect(() => {
     setAnnotationItems([]);
@@ -354,70 +381,6 @@ export function CanvasStage({
       x: ((event.clientX - bounds.left) / bounds.width) * viewBox.width,
       y: ((event.clientY - bounds.top) / bounds.height) * viewBox.height
     };
-  }
-
-  function updateCompareFromClientX(clientX: number) {
-    const bounds = imageFrameRef.current
-      ?.querySelector(".canvas-viewport-content")
-      ?.getBoundingClientRect();
-
-    if (!bounds || bounds.width === 0) {
-      return;
-    }
-
-    const nextCompare = ((clientX - bounds.left) / bounds.width) * 100;
-    onCompareChange(Math.round(clamp(nextCompare, 18, 82)));
-  }
-
-  function handleComparePointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (!hasResult) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    setIsCompareDragging(true);
-    updateCompareFromClientX(event.clientX);
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-
-  function handleComparePointerMove(event: PointerEvent<HTMLDivElement>) {
-    if (!isCompareDragging) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    updateCompareFromClientX(event.clientX);
-  }
-
-  function handleComparePointerUp(event: PointerEvent<HTMLDivElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-
-    if (isCompareDragging) {
-      event.preventDefault();
-      event.stopPropagation();
-      updateCompareFromClientX(event.clientX);
-      setIsCompareDragging(false);
-    }
-  }
-
-  function handleCompareKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
-    if (!hasResult) {
-      return;
-    }
-
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      onCompareChange(clamp(compare - 2, 18, 82));
-    }
-
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      onCompareChange(clamp(compare + 2, 18, 82));
-    }
   }
 
   function resetCanvasView() {
@@ -716,7 +679,7 @@ export function CanvasStage({
     setDragState(null);
   }
 
-  function renderAreaAnnotation(annotation: Extract<CanvasAnnotationSnapshot, { type: "area" }>) {
+  function renderAreaAnnotation(annotation: Extract<CanvasAnnotationItem, { type: "area" }>) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
     const labelX = clamp(annotation.x + 10, 10, viewBox.width - labelLength - 10);
@@ -788,7 +751,7 @@ export function CanvasStage({
   }
 
   function renderFixtureLineAnnotation(
-    annotation: Extract<CanvasAnnotationSnapshot, { type: "fixtureLine" }>
+    annotation: Extract<CanvasAnnotationItem, { type: "fixtureLine" }>
   ) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
@@ -846,7 +809,7 @@ export function CanvasStage({
   }
 
   function renderFixtureDirectionAnnotation(
-    annotation: Extract<CanvasAnnotationSnapshot, { type: "fixtureDirection" }>
+    annotation: Extract<CanvasAnnotationItem, { type: "fixtureDirection" }>
   ) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
@@ -899,7 +862,7 @@ export function CanvasStage({
   }
 
   function renderFixturePointAnnotation(
-    annotation: Extract<CanvasAnnotationSnapshot, { type: "fixturePoint" }>
+    annotation: Extract<CanvasAnnotationItem, { type: "fixturePoint" }>
   ) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
@@ -936,7 +899,7 @@ export function CanvasStage({
   }
 
   function renderFixtureAreaAnnotation(
-    annotation: Extract<CanvasAnnotationSnapshot, { type: "fixtureArea" }>
+    annotation: Extract<CanvasAnnotationItem, { type: "fixtureArea" }>
   ) {
     const isSelected = annotation.id === selectedAnnotationId;
     const labelLength = labelWidth(annotation.label);
@@ -1009,7 +972,7 @@ export function CanvasStage({
     );
   }
 
-  function renderAnnotation(annotation: CanvasAnnotationSnapshot) {
+  function renderAnnotation(annotation: CanvasAnnotationItem) {
     if (annotation.type === "area") {
       return renderAreaAnnotation(annotation);
     }
@@ -1197,9 +1160,7 @@ export function CanvasStage({
               <select
                 aria-label="选择夜景时间段"
                 value={selectedTime}
-                onChange={(event) =>
-                  setSelectedTime(event.currentTarget.value as NightRenderTimeRange)
-                }
+                onChange={(event) => setSelectedTime(event.currentTarget.value)}
               >
                 {timeOptions.map((time) => (
                   <option key={time}>{time}</option>
@@ -1239,24 +1200,7 @@ export function CanvasStage({
                       style={{ clipPath: `inset(0 ${100 - compare}% 0 0)` }}
                       aria-hidden="true"
                     />
-                    <div
-                      aria-label="图片对比拖拽线"
-                      aria-valuemax={82}
-                      aria-valuemin={18}
-                      aria-valuenow={compare}
-                      className={
-                        isCompareDragging
-                          ? "compare-line is-dragging"
-                          : "compare-line"
-                      }
-                      role="slider"
-                      style={{ left: `${compare}%` }}
-                      tabIndex={0}
-                      onKeyDown={handleCompareKeyDown}
-                      onPointerDown={handleComparePointerDown}
-                      onPointerMove={handleComparePointerMove}
-                      onPointerUp={handleComparePointerUp}
-                    />
+                    <div className="compare-line" style={{ left: `${compare}%` }} />
                   </>
                 ) : null}
 
@@ -1317,7 +1261,7 @@ export function CanvasStage({
                 <p>支持建筑、景观、室内和装置照片。上传后可标注灯位并设置生成参数。</p>
                 <div className="empty-canvas-steps">
                   <span>1 上传主图</span>
-                  <span>2 选择场景模式</span>
+                  <span>2 选择参考风格</span>
                   <span>3 标注灯光区域</span>
                 </div>
               </button>

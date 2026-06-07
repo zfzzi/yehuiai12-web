@@ -1,10 +1,8 @@
 import {
   BadgeCheck,
   ChevronDown,
-  CircleDot,
   Coins,
   CreditCard,
-  FolderOpen,
   LogOut,
   Mail,
   Phone,
@@ -15,9 +13,8 @@ import { useEffect, useRef, useState } from "react";
 import type { UserProfile } from "../auth/userProfile";
 
 interface TopBarProps {
-  hasPrimaryImage: boolean;
-  projectStatus: string;
   userProfile: UserProfile;
+  onBrandClick: () => void;
   onLogout: () => void;
   onRechargeCredits: (amount: number) => void;
 }
@@ -38,9 +35,8 @@ function formatDateTime(dateTime: string) {
 }
 
 export function TopBar({
-  hasPrimaryImage,
-  projectStatus,
   userProfile,
+  onBrandClick,
   onLogout,
   onRechargeCredits
 }: TopBarProps) {
@@ -94,24 +90,19 @@ export function TopBar({
 
   return (
     <header className="topbar">
-      <div className="brand-block">
+      <button
+        className="brand-block"
+        type="button"
+        onClick={onBrandClick}
+        aria-label="返回欢迎页面"
+      >
         <div className="brand-mark" aria-hidden="true">
           <Sparkles size={18} />
         </div>
-        <div>
-          <div className="brand-name">夜绘AI</div>
-          <div className="project-name">
-            <FolderOpen size={13} aria-hidden="true" />
-            未命名夜景项目
-          </div>
-        </div>
-      </div>
+        <span className="brand-name">Zerlum</span>
+      </button>
 
       <div className="top-actions">
-        <div className={hasPrimaryImage ? "project-status is-ready" : "project-status"}>
-          <CircleDot size={14} aria-hidden="true" />
-          <span>{projectStatus}</span>
-        </div>
         <div className="account-menu-wrap" ref={accountMenuRef}>
           <button
             aria-expanded={isAccountOpen}
@@ -135,7 +126,11 @@ export function TopBar({
           </button>
 
           {isAccountOpen ? (
-            <div className="account-menu" role="menu">
+            <div
+              className="account-menu"
+              role="menu"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
               <div className="account-profile">
                 <span className="account-profile-avatar" aria-hidden="true">
                   {userProfile.avatarInitial}
@@ -201,7 +196,9 @@ export function TopBar({
                   {lastRechargeAmount
                     ? `已增加 ${lastRechargeAmount} 积分`
                     : userProfile.rechargeRecords[0]
-                      ? `最近充值 ${userProfile.rechargeRecords[0].amount} 积分，${formatDateTime(userProfile.rechargeRecords[0].createdAt)}`
+                      ? `最近充值 ${userProfile.rechargeRecords[0].amount} 积分，${formatDateTime(
+                          userProfile.rechargeRecords[0].createdAt
+                        )}`
                       : "当前为本地积分记录，后续可接支付接口"}
                 </div>
               </div>
@@ -232,7 +229,11 @@ export function TopBar({
                     </div>
                   </div>
                 ) : null}
-                <button className="account-menu-row danger" type="button" onClick={onLogout}>
+                <button
+                  className="account-menu-row danger"
+                  type="button"
+                  onClick={onLogout}
+                >
                   <LogOut size={15} aria-hidden="true" />
                   <span>退出登录</span>
                 </button>

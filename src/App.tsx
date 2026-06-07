@@ -1,13 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { createLocalNightPreview } from "./api/localNightPreview";
+import { generateNightRender } from "./api/nightRenderClient";
 import {
-  ApiClientError,
-  generateNightRender
-} from "./api/nightRenderClient";
-import { buildNightRenderApiPayload } from "./api/nightRenderPayload";
-import {
-  buildSceneModePrompt,
   defaultReferences,
-  defaultSceneModeSelection,
+  initialPrompt,
   styleReferences
 } from "./data";
 import {
@@ -22,46 +18,87 @@ import { CanvasStage } from "./components/CanvasStage";
 import { InspectorPanel } from "./components/InspectorPanel";
 import { LeftPanel } from "./components/LeftPanel";
 import { TopBar } from "./components/TopBar";
+import { WelcomeScreen } from "./components/WelcomeScreen";
+import { InteractiveNebulaShader } from "./components/ui/liquid-shader";
 import type {
   CanvasTool,
-  CanvasGenerationContext,
   ExportRequest,
-  GenerationHistoryItem,
+  GenerationRequest,
   LightingMoodTemplate,
-  OutdoorSeason,
-  OutdoorTimeRange,
-  OutdoorWeather,
   ReferenceImage,
-  SceneMode,
-  SceneModeSelection,
   SceneType
 } from "./types/nightRender";
 import "./styles.css";
 
-function mapOutdoorTimeRangeToCanvasRange(
-  value: OutdoorTimeRange
-): CanvasGenerationContext["timeRange"] {
-  if (value === "17:00-19:00") {
-    return "蓝调时刻 18:00-19:00";
+type PreviewMode = "welcome" | "auth" | "workspace" | null;
+
+const previewUser: UserProfile = {
+  id: "preview-user",
+  username: "Preview",
+  email: "preview@zerlum.local",
+  phone: "",
+  plan: "试用版" as UserProfile["plan"],
+  credits: 120,
+  totalRecharged: 0,
+  createdAt: new Date().toISOString(),
+  lastLoginAt: new Date().toISOString(),
+  avatarInitial: "P",
+  rechargeRecords: []
+};
+
+function readPreviewMode(): PreviewMode {
+  if (typeof window === "undefined") {
+    return null;
   }
 
-  if (value === "19:00-20:00" || value === "20:00-22:00") {
-    return "入夜商业 19:00-21:00";
+  const mode = new URLSearchParams(window.location.search).get("preview");
+  return mode === "welcome" || mode === "auth" || mode === "workspace" ? mode : null;
+}
+
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("图片读取失败，请重新上传主图。"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function sourceToDataUrl(reference: ReferenceImage) {
+  if (reference.file) {
+    return blobToDataUrl(reference.file);
   }
 
-  return "深夜静谧 22:00-24:00";
+  if (!reference.previewUrl) {
+    throw new Error("请先上传主图。");
+  }
+
+  if (reference.previewUrl.startsWith("data:")) {
+    return reference.previewUrl;
+  }
+
+  const response = await fetch(reference.previewUrl);
+  const blob = await response.blob();
+  return blobToDataUrl(blob);
+}
+
+function shouldTryNightRenderApi() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return !import.meta.env.DEV || window.localStorage.getItem("zerlum.tryServerApi") === "1";
 }
 
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => loadCurrentUser());
+  const [authStage, setAuthStage] = useState<"welcome" | "auth">("welcome");
+  const [previewMode, setPreviewMode] = useState<PreviewMode>(() => readPreviewMode());
   const [references, setReferences] = useState<ReferenceImage[]>(defaultReferences);
-  const [primaryImageFile, setPrimaryImageFile] = useState<File>();
-  const selectedStyleReference = styleReferences[0];
-  const [sceneModeSelection, setSceneModeSelection] =
-    useState<SceneModeSelection>(defaultSceneModeSelection);
-  const [sceneType, setSceneType] = useState<SceneType>("建筑立面夜景");
+  const [selectedStyleReference, setSelectedStyleReference] = useState(styleReferences[0]);
+  const [sceneType, setSceneType] = useState<SceneType>(styleReferences[0].sceneType);
   const [selectedTemplate, setSelectedTemplate] =
-    useState<LightingMoodTemplate>("高级蓝调夜景");
+    useState<LightingMoodTemplate>(styleReferences[0].template);
   const [activeFixture, setActiveFixture] = useState("洗墙灯");
   const [negativePrompts, setNegativePrompts] = useState([
     "不改变建筑结构",
@@ -75,25 +112,40 @@ function App() {
   ]);
   const [activeTool, setActiveTool] = useState<CanvasTool>("标注灯位");
   const [compare, setCompare] = useState(48);
-  const [outputSize, setOutputSize] = useState<ExportRequest["type"]>("2K");
+  const [prompt, setPrompt] = useState(initialPrompt);
+  const [outputSize, setOutputSize] = useState<ExportRequest["type"]>("4K");
   const [resultImageUrl, setResultImageUrl] = useState<string>();
-  const [generationHistory, setGenerationHistory] = useState<GenerationHistoryItem[]>([]);
-  const [activeHistoryId, setActiveHistoryId] = useState<string>();
-  const [canvasGenerationContext, setCanvasGenerationContext] =
-    useState<CanvasGenerationContext>({
-      timeRange: "蓝调时刻 18:00-19:00",
-      activeTool: "标注灯位",
-      annotations: [],
-      viewBox: {
-        width: 1000,
-        height: 560
-      }
-    });
   const [apiStatus, setApiStatus] = useState({
     state: "idle" as "idle" | "loading" | "error" | "success",
-    message: "上传主图后可开始生成夜景效果图。"
+    message: "上传主图后可开始生成夜景测试预览。"
   });
-  const generationAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = "dark";
+    document.documentElement.dataset.appearance = "dark";
+  }, []);
+
+  useEffect(() => {
+    function handlePreviewRouteChange() {
+      setPreviewMode(readPreviewMode());
+    }
+
+    window.addEventListener("popstate", handlePreviewRouteChange);
+    return () => window.removeEventListener("popstate", handlePreviewRouteChange);
+  }, []);
+
+  function navigatePreview(mode: PreviewMode) {
+    const nextUrl = new URL(window.location.href);
+
+    if (mode) {
+      nextUrl.searchParams.set("preview", mode);
+    } else {
+      nextUrl.searchParams.delete("preview");
+    }
+
+    window.history.pushState(null, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+    setPreviewMode(mode);
+  }
 
   function handleUpload(id: string, file: File) {
     const previewUrl = file.type.startsWith("image/")
@@ -106,9 +158,7 @@ function App() {
     }
 
     if (id === "primary") {
-      setPrimaryImageFile(file.type.startsWith("image/") ? file : undefined);
       setResultImageUrl(undefined);
-      setActiveHistoryId(undefined);
     }
 
     setReferences((current) =>
@@ -116,6 +166,7 @@ function App() {
         reference.id === id
           ? {
               ...reference,
+              file,
               fileName: file.name,
               previewUrl,
               status: "ready"
@@ -133,9 +184,7 @@ function App() {
     }
 
     if (id === "primary") {
-      setPrimaryImageFile(undefined);
       setResultImageUrl(undefined);
-      setActiveHistoryId(undefined);
       setApiStatus({
         state: "idle",
         message: "主图已移除，可重新上传素材。"
@@ -147,6 +196,7 @@ function App() {
         reference.id === id
           ? {
               ...reference,
+              file: undefined,
               fileName: undefined,
               previewUrl: undefined,
               status: "missing"
@@ -161,31 +211,26 @@ function App() {
   }
 
   async function handleGenerate() {
-    const hasPrimaryImage = references.some(
-      (reference) => reference.role === "primary" && reference.status === "ready"
+    const primaryReference = references.find(
+      (reference) =>
+        reference.role === "primary" &&
+        reference.status === "ready" &&
+        reference.previewUrl
     );
 
-    if (!hasPrimaryImage || !primaryImageFile) {
+    if (!primaryReference?.previewUrl) {
       setApiStatus({
         state: "error",
-        message: "请先上传图片格式的主图，再开始生成夜景方案。"
+        message: "请先上传主图，再开始生成夜景方案。"
       });
       return;
     }
 
-    if (!currentUser) {
+    if (!activeUser) {
       return;
     }
 
-    if (sceneModeSelection.mode !== "outdoor") {
-      setApiStatus({
-        state: "error",
-        message: "室内照明预设尚未配置，请先选择室外照明测试。"
-      });
-      return;
-    }
-
-    if (currentUser.credits < 6) {
+    if (activeUser.credits < 6) {
       setApiStatus({
         state: "error",
         message: "积分不足，充值后可继续生成。"
@@ -193,104 +238,117 @@ function App() {
       return;
     }
 
-    if (!primaryImageFile.type.startsWith("image/")) {
-      setApiStatus({
-        state: "error",
-        message: "当前主图不是有效图片，请上传 JPG、PNG 或 WebP 文件。"
-      });
-      return;
-    }
-
-    generationAbortRef.current?.abort();
-    const controller = new AbortController();
-    generationAbortRef.current = controller;
-    const progressMessages = [
-      "正在上传主图...",
-      "正在处理灯具标注...",
-      "正在生成夜景效果...",
-      "正在校验结构与透视约束...",
-      "正在等待生成图片返回..."
-    ];
-    let progressIndex = 0;
-
     setApiStatus({
       state: "loading",
-      message: progressMessages[0]
+      message: "正在连接夜景生成 API..."
     });
 
-    const progressTimer = window.setInterval(() => {
-      progressIndex = Math.min(progressIndex + 1, progressMessages.length - 1);
-      setApiStatus({
-        state: "loading",
-        message: progressMessages[progressIndex]
-      });
-    }, 2400);
-
     try {
-      const payload = buildNightRenderApiPayload({
-        projectId: `night-project-${currentUser.id}`,
-        imageFile: primaryImageFile,
+      const sourceDataUrl = await sourceToDataUrl(primaryReference);
+      const request: GenerationRequest = {
+        projectId: "zerlum-night-render",
+        sourceImage: {
+          dataUrl: sourceDataUrl,
+          fileName: primaryReference.fileName,
+          mimeType: primaryReference.file?.type,
+          size: primaryReference.file?.size
+        },
+        references: references.map((reference) => ({
+          role: reference.role,
+          fileName: reference.fileName,
+          status: reference.status
+        })),
         sceneType,
         template: selectedTemplate,
-        styleReference: selectedStyleReference,
-        canvas: canvasGenerationContext,
-        prompt: buildSceneModePrompt(sceneModeSelection),
+        params: {
+          colorTemperature: 4200,
+          brightness: 72,
+          halo: 58,
+          interiorGlow: 64,
+          shadow: 66,
+          blueTone: selectedTemplate.includes("暖") ? 48 : 78,
+          warmLight: selectedTemplate.includes("冷") ? 42 : 70,
+          glareControl: 78,
+          overexposureRepair: 82,
+          warmCoolContrast: "中"
+        },
+        prompt,
         negativePrompts,
-        outputSize
-      });
-      const response = await generateNightRender({
-        imageFile: primaryImageFile,
-        payload,
-        signal: controller.signal
-      });
-
-      if (response.status === "failed") {
-        throw new ApiClientError(response.error || "夜景生成失败。");
-      }
-
-      if (!response.resultImageUrl) {
-        throw new ApiClientError("API 已响应，但没有返回可显示的生成图片 URL。");
-      }
-
-      const updatedUser = consumeUserCredits(currentUser.id, 6);
-      if (updatedUser) {
-        setCurrentUser(updatedUser);
-      }
-
-      setResultImageUrl(response.resultImageUrl);
-      const historyItem: GenerationHistoryItem = {
-        id: response.versionId ?? `history-${Date.now()}`,
-        title: `${sceneModeSelection.outdoor.timeRange} · ${sceneModeSelection.outdoor.weather}`,
-        subtitle: `${sceneModeSelection.outdoor.season} / ${outputSize} / ${selectedTemplate}`,
-        imageUrl: response.resultImageUrl,
-        outputSize,
-        createdAt: new Date().toISOString()
+        locks: ["建筑结构", "透视关系", "人物", "树木", "地面铺装", "灯具"],
+        annotations: [],
+        styleReference: {
+          id: selectedStyleReference.id,
+          title: selectedStyleReference.title,
+          template: selectedStyleReference.template
+        },
+        output: {
+          size:
+            outputSize === "2K" ||
+            outputSize === "4K" ||
+            outputSize === "6K" ||
+            outputSize === "8K"
+              ? outputSize
+              : "4K",
+          ratio: "自动适配",
+          format: "PNG"
+        }
       };
-      setGenerationHistory((current) => [
-        historyItem,
-        ...current.filter(
-          (item) => item.id !== historyItem.id && item.imageUrl !== historyItem.imageUrl
-        )
-      ].slice(0, 8));
-      setActiveHistoryId(historyItem.id);
-      setCompare(18);
+
+      let usedApi = false;
+      let resultUrl: string | undefined;
+
+      if (shouldTryNightRenderApi()) {
+        try {
+          const response = await generateNightRender(request);
+
+          if (response.status === "completed" && response.resultImageUrl) {
+            usedApi = true;
+            resultUrl = response.resultImageUrl;
+          } else {
+            throw new Error(response.error || "生成服务暂未返回结果图。");
+          }
+        } catch {
+          resultUrl = await createLocalNightPreview(primaryReference.previewUrl, {
+            fixture: activeFixture,
+            outputSize,
+            prompt,
+            sceneType,
+            template: selectedTemplate
+          });
+        }
+      } else {
+        resultUrl = await createLocalNightPreview(primaryReference.previewUrl, {
+          fixture: activeFixture,
+          outputSize,
+          prompt,
+          sceneType,
+          template: selectedTemplate
+        });
+      }
+
+      if (!resultUrl) {
+        throw new Error("没有可用的生成结果。");
+      }
+
+      if (usedApi && activeUser.id !== previewUser.id) {
+        const updatedUser = consumeUserCredits(activeUser.id, 6);
+        if (updatedUser) {
+          setCurrentUser(updatedUser);
+        }
+      }
+
+      setResultImageUrl(resultUrl);
       setApiStatus({
         state: "success",
-        message: "夜景效果图已生成，已扣除 6 积分。"
+        message: usedApi
+          ? "AI API 生成完成，已扣除 6 积分。"
+          : "本地夜景预览已生成；真实 API 未连通或未配置密钥，未扣除积分。"
       });
     } catch (error) {
       setApiStatus({
         state: "error",
-        message:
-          error instanceof ApiClientError
-            ? error.message
-            : "生成失败，请检查 API 服务后重试。"
+        message: error instanceof Error ? error.message : "生成失败，请重新上传主图后再试。"
       });
-    } finally {
-      window.clearInterval(progressTimer);
-      if (generationAbortRef.current === controller) {
-        generationAbortRef.current = null;
-      }
     }
   }
 
@@ -336,62 +394,15 @@ function App() {
     }
   }
 
+  function handleStyleSelect(style: typeof selectedStyleReference) {
+    setSelectedStyleReference(style);
+    setSceneType(style.sceneType);
+    setSelectedTemplate(style.template);
+  }
+
   function handleFixtureChange(fixture: string) {
     setActiveFixture(fixture);
     setActiveTool("标注灯位");
-  }
-
-  function handleHistorySelect(item: GenerationHistoryItem) {
-    setResultImageUrl(item.imageUrl);
-    setActiveHistoryId(item.id);
-    setCompare(18);
-    setApiStatus({
-      state: "success",
-      message: "已切换到历史生成方案。"
-    });
-  }
-
-  function handleSceneModeChange(mode: SceneMode) {
-    setSceneModeSelection((current) => ({
-      ...current,
-      mode
-    }));
-
-    if (mode === "outdoor") {
-      setSceneType("建筑立面夜景");
-      setSelectedTemplate("高级蓝调夜景");
-      setCanvasGenerationContext((current) => ({
-        ...current,
-        timeRange: mapOutdoorTimeRangeToCanvasRange(sceneModeSelection.outdoor.timeRange)
-      }));
-      return;
-    }
-
-    setSceneType("商场室内");
-    setSelectedTemplate("内透灯光增强");
-  }
-
-  function handleOutdoorOptionChange(
-    key: keyof SceneModeSelection["outdoor"],
-    value: OutdoorSeason | OutdoorTimeRange | OutdoorWeather
-  ) {
-    setSceneModeSelection((current) => ({
-      mode: "outdoor",
-      outdoor: {
-        ...current.outdoor,
-        [key]: value
-      } as SceneModeSelection["outdoor"]
-    }));
-
-    if (key === "timeRange") {
-      setCanvasGenerationContext((current) => ({
-        ...current,
-        timeRange: mapOutdoorTimeRangeToCanvasRange(value as OutdoorTimeRange)
-      }));
-    }
-
-    setSceneType("建筑立面夜景");
-    setSelectedTemplate("高级蓝调夜景");
   }
 
   function handleRechargeCredits(amount: number) {
@@ -407,6 +418,7 @@ function App() {
 
   function handleLogout() {
     clearCurrentUser();
+    setAuthStage("auth");
     setCurrentUser(null);
   }
 
@@ -415,22 +427,38 @@ function App() {
   )?.previewUrl;
   const canGenerate = Boolean(primaryPreviewUrl);
   const canExport = Boolean(resultImageUrl);
-  const projectStatus = primaryPreviewUrl
-    ? resultImageUrl
-      ? "预览已生成"
-      : "素材已就绪"
-    : "等待主图";
 
-  if (!currentUser) {
-    return <AuthScreen onAuthenticated={setCurrentUser} />;
+  const activeUser = previewMode === "workspace" ? currentUser ?? previewUser : currentUser;
+
+  if (previewMode === "welcome") {
+    return <WelcomeScreen onContinue={() => navigatePreview("auth")} />;
+  }
+
+  if (previewMode === "auth") {
+    return (
+      <AuthScreen
+        onAuthenticated={(user) => {
+          setCurrentUser(user);
+          navigatePreview("workspace");
+        }}
+      />
+    );
+  }
+
+  if (!activeUser) {
+    return authStage === "welcome" ? (
+      <WelcomeScreen onContinue={() => setAuthStage("auth")} />
+    ) : (
+      <AuthScreen onAuthenticated={setCurrentUser} />
+    );
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell zerlum-workspace">
+      <InteractiveNebulaShader className="workspace-shader" disableCenterDimming />
       <TopBar
-        hasPrimaryImage={Boolean(primaryPreviewUrl)}
-        projectStatus={projectStatus}
-        userProfile={currentUser}
+        userProfile={activeUser}
+        onBrandClick={() => navigatePreview("welcome")}
         onLogout={handleLogout}
         onRechargeCredits={handleRechargeCredits}
       />
@@ -442,12 +470,8 @@ function App() {
       <div className="workspace">
         <LeftPanel
           references={references}
-          sceneModeSelection={sceneModeSelection}
-          generationHistory={generationHistory}
-          activeHistoryId={activeHistoryId}
-          onHistorySelect={handleHistorySelect}
-          onOutdoorOptionChange={handleOutdoorOptionChange}
-          onSceneModeChange={handleSceneModeChange}
+          selectedStyleId={selectedStyleReference.id}
+          onStyleSelect={handleStyleSelect}
           onUpload={handleUpload}
           onRemoveUpload={handleRemoveUpload}
         />
@@ -457,7 +481,6 @@ function App() {
           compare={compare}
           resultImageUrl={resultImageUrl}
           sourceImageUrl={primaryPreviewUrl}
-          onCanvasStateChange={setCanvasGenerationContext}
           onCompareChange={setCompare}
           onPrimaryImageUpload={(file) => handleUpload("primary", file)}
           onToolChange={setActiveTool}
@@ -468,17 +491,16 @@ function App() {
           canExport={canExport}
           negativePrompts={negativePrompts}
           outputSize={outputSize}
-          sceneType={sceneType}
-          selectedTemplate={selectedTemplate}
+          prompt={prompt}
           canGenerate={canGenerate}
           onFixtureChange={handleFixtureChange}
           onExport={handleExport}
           onGenerate={handleGenerate}
           onNegativeToggle={(item) =>
-            setNegativePrompts((current) => toggleListValue(current, item))
+              setNegativePrompts((current) => toggleListValue(current, item))
           }
           onOutputSizeChange={setOutputSize}
-          onSceneChange={setSceneType}
+          onPromptChange={setPrompt}
         />
       </div>
     </div>

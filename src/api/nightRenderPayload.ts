@@ -97,8 +97,12 @@ const preserveConstraints = [
 ];
 
 const outputSizeMap: Record<ExportRequest["type"], string> = {
-  "1K": "1024x1024",
   "2K": "2048x1152",
+  "4K": "3840x2160",
+  "6K": "6144x3456",
+  "8K": "7680x4320",
+  汇报版式: "1920x1080",
+  对比图: "3840x2160"
 };
 
 const canvasToolPrompts: Record<CanvasTool, string> = {

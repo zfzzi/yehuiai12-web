@@ -12,6 +12,7 @@ export interface ReferenceImage {
   role: ReferenceImageRole;
   label: string;
   hint: string;
+  file?: File;
   fileName?: string;
   previewUrl?: string;
   status: ReferenceStatus;
@@ -25,35 +26,6 @@ export interface StyleReference {
   sceneType: SceneType;
   template: LightingMoodTemplate;
   tone: "outdoor" | "indoor" | "facade" | "commercial";
-}
-
-export type SceneMode = "outdoor" | "indoor";
-
-export type OutdoorSeason = "春" | "夏" | "秋" | "冬";
-
-export type OutdoorTimeRange =
-  | "17:00-19:00"
-  | "19:00-20:00"
-  | "20:00-22:00"
-  | "22:00-24:00"
-  | "00:00-";
-
-export type OutdoorWeather =
-  | "晴朗"
-  | "多云"
-  | "雾气"
-  | "雨天"
-  | "雪天"
-  | "星空"
-  | "极光";
-
-export interface SceneModeSelection {
-  mode: SceneMode;
-  outdoor: {
-    season: OutdoorSeason;
-    timeRange: OutdoorTimeRange;
-    weather: OutdoorWeather;
-  };
 }
 
 export type SceneType =
@@ -171,9 +143,9 @@ export type CanvasAnnotationSnapshot =
     };
 
 export interface CanvasGenerationContext {
-  timeRange: NightRenderTimeRange;
   activeTool: CanvasTool;
   annotations: CanvasAnnotationSnapshot[];
+  timeRange: NightRenderTimeRange;
   viewBox: {
     width: number;
     height: number;
@@ -189,6 +161,12 @@ export interface CanvasAnnotation {
 
 export interface GenerationRequest {
   projectId: string;
+  sourceImage?: {
+    dataUrl: string;
+    fileName?: string;
+    mimeType?: string;
+    size?: number;
+  };
   references: Array<{
     role: ReferenceImageRole;
     fileName?: string;
@@ -207,7 +185,7 @@ export interface GenerationRequest {
     template: LightingMoodTemplate;
   };
   output: {
-    size: "1K" | "2K";
+    size: "2K" | "4K" | "6K" | "8K" | "16K";
     ratio: "16:9" | "3:4" | "1:1" | "自动适配";
     format: "PNG" | "JPG" | "TIFF";
   };
@@ -220,15 +198,8 @@ export interface GenerationResponse {
   resultImageUrl?: string;
   versionId?: string;
   error?: string;
-}
-
-export interface GenerationHistoryItem {
-  id: string;
-  title: string;
-  subtitle: string;
-  imageUrl: string;
-  outputSize: "1K" | "2K";
-  createdAt: string;
+  provider?: "api" | "local-fallback";
+  message?: string;
 }
 
 export interface PromptOptimizationResponse {
@@ -245,5 +216,5 @@ export interface ProjectVersion {
 export interface ExportRequest {
   projectId: string;
   versionId: string;
-  type: "1K" | "2K";
+  type: "2K" | "4K" | "6K" | "8K" | "汇报版式" | "对比图";
 }
